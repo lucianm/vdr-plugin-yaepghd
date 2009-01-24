@@ -1,0 +1,53 @@
+This is a "plugin" for the Video Disk Recorder (VDR).
+
+Written by:                  bball <bball950@yahoo.com>
+
+Project's homepage:          http://projects.vdr-developer.org/projects/show/plg-yaepghd
+
+Latest version available at: URL
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+See the file COPYING for more information.
+
+Description:
+
+Yaepghd is a compelte rewrite of the original yaepg plugin.  The
+original yaepg plugin was designed for FF cards and only used 4
+colors due to limitations on the amount of OSD memory on FF cards.
+Yaepghd requires output devices with an OSD capable of high color
+full screen grpahics (e.g. eHD or xine) and will _not_ work with FF
+cards (unless you have the 4MB mod).
+
+In the original yaepg the layout and sizes of all the components
+were hardcoded in the source code which made it difficult to
+customize.  Yaepghd uses themes which allow a user to completely
+redfine the the way yaepghd looks.
+
+Themes must be placed in the $(CONFDIR)/plugins/yaepghd directory.
+Any fonts used by a theme must be added to the fontconfig cache.
+This can be done by either copying the fonts to one of your existing
+font directories or by adding the yaepghd theme directory to your
+font path.  After this is done you must run fc-cache for the new
+font to be available.
+
+Keys:
+Guide
+Up/Down        - Move the cursor up/down in the grid.
+Left/Right     - Move the cursor left/right in the grid.
+Chan Up/Down   - Page up/down within the grid.
+Ok             - Tune to the selected channel and exit the plugin.
+Green          - Scroll +12 hours in the grid.
+Red            - Scroll -12 hours in the grid.
+Blue           - Take a screenshot.
+Yellow         - Tune to the selected channel.
+Back/Exit      - Exit the plugin.
+0-9            - Perform direct channel change.
+
+Record Dialog
+Up/Down        - Move the cursor between input boxes.
+Left/Right     - Modify input box values.
+Ok             - Add timer.
+Back/Exit      - Cancel timer.

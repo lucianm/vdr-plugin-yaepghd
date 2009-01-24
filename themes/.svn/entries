@@ -1,0 +1,43 @@
+8
+
+dir
+15
+svn+ssh://octorok.org/var/svn-repos/yaepghd/themes
+svn+ssh://octorok.org/var/svn-repos/yaepghd
+
+
+
+2008-08-28T01:07:19.002383Z
+14
+bball
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+9aaac883-65b3-4621-aff0-d2a75fbc3057
+
+default
+dir
+
+default.theme
+file
+
+
+
+
+2009-01-24T18:12:45.000000Z
+074544efc87897c6bd5f7647d14d0b87
+2008-08-28T01:07:19.002383Z
+14
+bball
+
