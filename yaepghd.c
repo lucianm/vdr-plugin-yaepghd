@@ -22,7 +22,7 @@
 /**
  * Macros
  */
-#define REEL_EHD
+// #define REEL_EHD
 
 #ifdef DEBUG
 #define ASSERT                   assert
