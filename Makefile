@@ -43,7 +43,7 @@ PACKAGE = vdr-$(ARCHIVE)
 
 INCLUDES += -I$(VDRDIR)/include -I/usr/include/ImageMagick -I.
 
-LIBS = -lMagick -lMagick++ -L/usr/local/lib -lcurl
+LIBS = -lMagick++ -L/usr/local/lib -lcurl
 
 DEFINES += -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
