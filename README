@@ -33,6 +33,14 @@ font directories or by adding the yaepghd theme directory to your
 font path.  After this is done you must run fc-cache for the new
 font to be available.
 
+NOTE: The default theme contains a font whose license is not
+compatible with the GPL.  From the font's license:
+
+        "Tepid Monkey Fonts typefaces may be used for free in work
+         that will not generate a profit. If you intend to use the
+         font on an item or project that will be sold, please send
+         me an email first."
+
 Keys:
 Guide
 Up/Down        - Move the cursor up/down in the grid.
