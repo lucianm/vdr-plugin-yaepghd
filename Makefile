@@ -3,6 +3,9 @@
 #
 # $Id$
 
+# Use Reel eHD card
+#YAEPGHD_REEL_EHD = 1
+
 # The official name of this plugin.
 # This name will be used in the '-P...' option of VDR to load the plugin.
 # By default the main source file also carries this name.
@@ -41,15 +44,22 @@ PACKAGE = vdr-$(ARCHIVE)
 
 ### Includes and Defines (add further entries here):
 
-INCLUDES += -I$(VDRDIR)/include -I/usr/include/ImageMagick -I.
+INCLUDES += -I$(VDRDIR)/include -I.
 
-LIBS = -lMagick++ -L/usr/local/lib -lcurl
+LIBS = -lMagick++
+
+INCLUDES += $(shell pkg-config --cflags-only-I Magick++)
 
 DEFINES += -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
+ifdef YAEPGHD_REEL_EHD
+DEFINES += -DYAEPGHD_REEL_EHD
+LIBS += -lcurl
+endif
+
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o i18n.o
+OBJS = $(PLUGIN).o
 
 ### The main target:
 

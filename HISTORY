@@ -1,8 +1,16 @@
 VDR Plugin 'yaepghd' Revision History
 -------------------------------------
 
-2008-06-22: Version 0.0.1
+2009-xx-xx: Version 0.0.1
 
 - Initial revision.
 - Rewrite of the yaepg plugin.
 - Support for themes.
+- Added gettext support (Rolf Ahrenberg).
+- Updated and added patch for vdr-1.6.0 (Rolf Ahrenberg).
+- Changed cReelVidWin to use cThread (Rolf Ahrenberg).
+- Added support for MainMenuHooks patch (Rolf Ahrenberg).
+- Renamed REEL_EHD to YAEPGHD_REEL_EHD and moved the setting into Makefile (Rolf Ahrenberg).
+- Fixed couple of crash bugs (Rolf Ahrenberg).
+
+TODO: Video Window doesn't scale back to normal when quiting the plugin

@@ -1,0 +1,94 @@
+# VDR plugin language source file.
+# Copyright (C) 2009 bball <bball950@yahoo.com>
+# This file is distributed under the same license as the yaepghd package.
+# Rolf Ahrenberg <rahrenbe@cc.hut.fi>, 2009
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Yaepghd 0.0.1\n"
+"Report-Msgid-Bugs-To: <see README>\n"
+"POT-Creation-Date: 2009-01-28 20:31+0200\n"
+"PO-Revision-Date: 2009-01-28 10:51+0200\n"
+"Last-Translator: Rolf Ahrenberg <rahrenbe@cc.hut.fi>\n"
+"Language-Team: <vdr@linuxtv.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "No Info"
+msgstr "Ei tietoja"
+
+msgid "-12 Hours"
+msgstr "-12h"
+
+msgid "+12 Hours"
+msgstr "+12h"
+
+msgid "Switch"
+msgstr "Vaihda"
+
+msgid "Screenshot"
+msgstr "Kuvakaappaus"
+
+msgid "Once"
+msgstr "kerran"
+
+msgid "Every"
+msgstr "aina"
+
+msgid "Mon-Fri"
+msgstr "Ma-pe"
+
+msgid "Sun-Sat"
+msgstr "Su-la"
+
+msgid "Start"
+msgstr "Aloitus"
+
+msgid "Stop"
+msgstr "Lopetus"
+
+msgid "Frequency"
+msgstr "Taajuus"
+
+msgid "24h"
+msgstr "24h"
+
+msgid "12h"
+msgstr "12h"
+
+msgid "Up"
+msgstr "nouseva"
+
+msgid "Down"
+msgstr "laskeva"
+
+msgid "Manual"
+msgstr "manuaalinen"
+
+msgid "Manual in EPG"
+msgstr "manuaalinen; EPG"
+
+msgid "Automatic in EPG"
+msgstr "automaattinen; EPG"
+
+msgid "Hide mainmenu entry"
+msgstr "Piilota valinta päävalikosta"
+
+msgid "Replace original schedule"
+msgstr "Korvaa alkuperäinen ohjelmaopas"
+
+msgid "Channel Change"
+msgstr "Kanavanvaihto"
+
+msgid "Time format"
+msgstr "Kellonajan esitysmuoto"
+
+msgid "Channel Order"
+msgstr "Kanavajärjetys"
+
+msgid "Yet another EPG in HD"
+msgstr "Vaihtoehtoinen ohjelmaopas"
+
+msgid "YaepgHD"
+msgstr "Ohjelmaopas (YaepgHD)"

@@ -12,17 +12,30 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <assert.h>
+#include <Magick++.h>
+#ifdef YAEPGHD_REEL_EHD
+#include <curl/curl.h>
+#endif
+
+#include <vdr/config.h>
+#include <vdr/tools.h>
 #include <vdr/plugin.h>
 #include <vdr/osd.h>
 #include <vdr/device.h>
-#include <Magick++.h>
-#include <curl/curl.h>
-#include <assert.h>
+#include <vdr/thread.h>
+
+#ifndef YAEPGHDVERSNUM
+#error "You must apply the yaepghd patch for VDR!"
+#endif
+
+#if defined(APIVERSNUM) && APIVERSNUM < 10600
+#error "VDR-1.6.0 API version or greater is required!"
+#endif
 
 /**
  * Macros
  */
-// #define REEL_EHD
 
 #ifdef DEBUG
 #define ASSERT                   assert
@@ -110,42 +123,40 @@
 #define MSG_BOX_GEOM             THEME_GEOM("msgBoxGeom")
 
 /* Manner in which channel is changed while in YAEPG */
-#define CHANNEL_CHANGE_MANUAL          0
-#define CHANNEL_CHANGE_MANUAL_INEPG    1
-#define CHANNEL_CHANGE_AUTO_INEPG      2
+enum eChanneChangeType {
+   CHANNEL_CHANGE_MANUAL,
+   CHANNEL_CHANGE_MANUAL_INEPG,
+   CHANNEL_CHANGE_AUTO_INEPG,
+   CHANNEL_CHANGE_COUNT
+};
 
-#define TIME_24HR                      0
-#define TIME_12HR                      1
+enum eTimeFormatType {
+   TIME_FORMAT_24H,
+   TIME_FORMAT_12H,
+   TIME_FORMAT_COUNT
+};
+
 #define FMT_AMPM(_hr)                  ((_hr) >= 12 ? "p" : "a")
 #define FMT_12HR(_hr)                  ((_hr) % 12 == 0 ? 12 : (_hr) % 12)
 
 /* Order of channels (UP or DOWN) */
-#define CHANNEL_ORDER_UP               0
-#define CHANNEL_ORDER_DOWN             1
+enum eChannelOrderType {
+   CHANNEL_ORDER_UP,
+   CHANNEL_ORDER_DOWN,
+   CHANNEL_ORDER_COUNT
+};
 
 using namespace Magick;
 
 /**
  * Private Data
  */
-static const char *numToDay[7] = {
-   "Sun",
-   "Mon",
-   "Tue",
-   "Wed",
-   "Thur",
-   "Fri",
-   "Sat"
-};
-
 static int iHideMenuEntry              = false;
+static int iReplaceOrgSchedule         = false;
 static int iChannelChange              = CHANNEL_CHANGE_MANUAL;
-static int iTimeFormat                 = TIME_12HR;
+static int iTimeFormat                 = TIME_FORMAT_12H;
 static int iChannelOrder               = CHANNEL_ORDER_DOWN;
-static char *sThemeName                = "default";
-static const char *TIME_FORMATS[2]     = { "24", "12" };
-static const char *CH_ORDER_FORMATS[2] = { "UP", "DOWN" };
-static const char *CH_CHANGE_MODES[3]  = { "MANUAL", "MANUAL IN EPG", "AUTO IN EPG" };
+static char sThemeName[MaxThemeName]   = "default";
 
 /**
  * Pirvate Classes/Function Prototypes
@@ -172,7 +183,7 @@ yaepg_error(const char *func, const char *fmt, ...)
    vsnprintf(eMsg, sizeof(eMsg), fmt, ap);
    va_end(ap);
    snprintf(eLine, sizeof(eLine), "ERROR: YaEPGHD: %s: %s", func, eMsg);
-   esyslog(eLine);
+   esyslog("%s", eLine);
 }
 
 void
@@ -185,7 +196,7 @@ yaepg_info(const char *func, const char *fmt, ...)
    vsnprintf(iMsg, sizeof(iMsg), fmt, ap);
    va_end(ap);
    snprintf(iLine, sizeof(iLine), "INFO: YaEPGHD: %s: %s", func, iMsg);
-   isyslog(iLine);
+   isyslog("%s", iLine);
 }
 
 /*
@@ -958,8 +969,8 @@ cYaepgGrid::cNoInfoEvent::cNoInfoEvent(time_t startTime) :
 {
    SetStartTime(startTime);
    SetDuration(9000);
-   SetTitle(tr(tr("No Info")));
-   SetDescription(tr(tr("No Info")));
+   SetTitle(tr("No Info"));
+   SetDescription(tr("No Info"));
 }
 
 cYaepgGrid::cYaepgGrid(std::vector< cChannel *> &chans, int time) :
@@ -1385,7 +1396,7 @@ cYaepgGridTime::Generate(void)
    for (int i = 0; i < 3; i++) {
       localtime_r(&curTime, &locTime);
       locTime.tm_min = (locTime.tm_min >= 30) ? 30 : 0;
-      if (iTimeFormat == TIME_24HR) {
+      if (iTimeFormat == TIME_FORMAT_24H) {
          snprintf(timeStr, sizeof(timeStr), "%02d:%02d",
                   locTime.tm_hour, locTime.tm_min);
       } else {
@@ -1453,7 +1464,7 @@ cYaepgGridDate::UpdateTime(time_t _t)
    t = _t;
    localtime_r(&t, &locTime);
    snprintf(dateStr, sizeof(dateStr), "%s %d/%d",
-            tr(numToDay[locTime.tm_wday]), locTime.tm_mon, locTime.tm_mday);
+            *WeekDayName((locTime.tm_wday + 6) % 6), locTime.tm_mon, locTime.tm_mday);
    Generate();
 }
 
@@ -1575,7 +1586,7 @@ cYaepgEventTime::Generate(void)
    localtime_r(&t, &locStart);
    t += event->Duration();
    localtime_r(&t, &locEnd);
-   if (iTimeFormat == TIME_24HR) {
+   if (iTimeFormat == TIME_FORMAT_24H) {
       snprintf(timeStr, sizeof(timeStr), "%02d:%02d - %02d:%02d",
                locStart.tm_hour, locStart.tm_min,
                locEnd.tm_hour, locEnd.tm_min);
@@ -1635,7 +1646,7 @@ cYaepgEventDesc::cYaepgEventDesc(const cEvent *_event) :
 void
 cYaepgEventDesc::Generate(void)
 {
-   box.Text(event->Description() ? event->Description() : "");
+   box.Text(event->Description() ? event->Description() : (event->ShortText() ? event->ShortText() : ""));
    box.Font(EVENT_DESC_FONT);
    box.FgColor(EVENT_DESC_COLOR);
    box.BgColor(clrTransparent);
@@ -1686,12 +1697,12 @@ cYaepgEventDate::Generate(void)
 
    time_t t = time(NULL);
    localtime_r(&t, &locTime);
-   if (iTimeFormat == TIME_24HR) {
+   if (iTimeFormat == TIME_FORMAT_24H) {
       snprintf(timeStr, sizeof(timeStr), "%s %02d:%02d",
-               tr(numToDay[locTime.tm_wday]), locTime.tm_hour, locTime.tm_min);
+               *WeekDayName((locTime.tm_wday + 6) % 6), locTime.tm_hour, locTime.tm_min);
    } else {
       snprintf(timeStr, sizeof(timeStr), "%s %d:%02d%s",
-               tr(numToDay[locTime.tm_wday]),
+               *WeekDayName((locTime.tm_wday + 6) % 6),
                FMT_12HR(locTime.tm_hour), locTime.tm_min,
                FMT_AMPM(locTime.tm_hour));
    }
@@ -1810,10 +1821,10 @@ public:
 };
 
 const char *cYaepgHelpBar::helpStrs[4] = {
-   "-12 Hours",
-   "+12 Hours",
-   "Tune Channel",
-   "Screenshot"
+   trNOOP("-12 Hours"),
+   trNOOP("+12 Hours"),
+   trNOOP("Switch"),
+   trNOOP("Screenshot")
 };
 
 const tColor cYaepgHelpBar::dotColors[4] = {
@@ -1829,7 +1840,7 @@ cYaepgHelpBar::cYaepgHelpBar(void) :
    geom = HELP_BAR_GEOM;
    int boxWidth = geom.w / 4;
    for (int i = 0; i < 4; i++) {
-      boxes[i].Text(helpStrs[i]);
+      boxes[i].Text(tr(helpStrs[i]));
       boxes[i].Font(GRID_EVENT_FONT);
       boxes[i].FgColor(GRID_EVENT_COLOR);
       boxes[i].BgColor(clrTransparent);
@@ -1886,7 +1897,7 @@ cYaepgInputTime::UpdateTime(time_t _t)
 
    t = _t;
    localtime_r(&t, &locTime);
-   if (iTimeFormat == TIME_24HR) {
+   if (iTimeFormat == TIME_FORMAT_24H) {
       snprintf(timeStr, sizeof(timeStr), "%02d:%02d",
                locTime.tm_hour, locTime.tm_min);
    } else {
@@ -2010,10 +2021,10 @@ public:
 };
 
 const char *cYaepgRecDlg::freqStra[4] = {
-   "Once",
-   "Every",
-   "Mon-Fri",
-   "Sun-Sat",
+   trNOOP("Once"),
+   trNOOP("Every"),
+   trNOOP("Mon-Fri"),
+   trNOOP("Sun-Sat"),
 };
 
 cYaepgRecDlg::cYaepgRecDlg(void) :
@@ -2107,9 +2118,8 @@ cYaepgRecDlg::cYaepgRecDlg(void) :
    freqInput.H(REC_FRINP_GEOM.h);
 
    for (int i = 0; i < 4; i++) {
-      strcpy(freqs[i], tr(freqStra[i]));
+      strncpy(freqs[i], tr(freqStra[i]), sizeof(freqs[i]));
    }
-   freqs[5][0] = '\0';
 }
 
 eOSState
@@ -2167,7 +2177,7 @@ cYaepgRecDlg::UpdateEvent(const cEvent *_event)
    localtime_r(&t, &locStart);
    t += event->Duration();
    localtime_r(&t, &locEnd);
-   if (iTimeFormat == TIME_24HR) {
+   if (iTimeFormat == TIME_FORMAT_24H) {
       snprintf(timeStr, sizeof(timeStr), "%02d:%02d - %02d:%02d",
                locStart.tm_hour, locStart.tm_min,
                locEnd.tm_hour, locEnd.tm_min);
@@ -2190,7 +2200,7 @@ cYaepgRecDlg::UpdateEvent(const cEvent *_event)
    t = event->StartTime();
    localtime_r(&t, &locTime);
    freqs[1][5] = ' ';
-   strcpy(&freqs[1][6], tr(numToDay[locTime.tm_wday]));
+   strcpy(&freqs[1][6], *WeekDayName((locTime.tm_wday + 6) % 6));
    freqInput.UpdateStra((char **)freqs);
 }
 
@@ -2253,7 +2263,7 @@ cYaepgMsg::Draw(cBitmap *bmp)
    msgBox.Draw(bmp);
 }
 
-#ifdef REEL_EHD
+#ifdef YAEPGHD_REEL_EHD
 /*
  *****************************************************************************
  * cReelVidWin
@@ -2269,14 +2279,15 @@ cYaepgMsg::Draw(cBitmap *bmp)
 #define VIDPLANE_HORI            1920
 #define VIDPLANE_VERT            1080
 
-class cReelVidWin {
+class cReelVidWin : private cThread {
 private:
-   pthread_t thrd;
    FILE *readFp, *writeFp;
 
-   static void *CurlThread(void *arg);
    static size_t CurlWrite(void *ptr, size_t size, size_t nmemb, void *stream);
    void SendCmd(const char *cmd);
+
+protected:
+   virtual void Action(void);
 
 public:
    cReelVidWin(void);
@@ -2297,7 +2308,8 @@ cReelVidWin::~cReelVidWin()
 {
    Close();
    SendCmd("exit\n");
-   (void) pthread_join(thrd, NULL);
+   if (Running())
+      Cancel(3);
    (void) close(fileno(readFp));
    (void) close(fileno(writeFp));
    (void) fclose(readFp);
@@ -2310,30 +2322,29 @@ cReelVidWin::CurlWrite(void *ptr, size_t size, size_t nmemb, void *stream)
    return (size * nmemb);
 }
 
-void *
-cReelVidWin::CurlThread(void *arg)
+
+void cReelVidWin::Action(void)
 {
    CURL *hdl;
    CURLcode status;
-   FILE *fp = (FILE *)arg;
 
    hdl = curl_easy_init();
    if (hdl == NULL) {
       YAEPG_ERROR("curl_easy_init");
-      return NULL;
+      return;
    }
 
    status = curl_easy_setopt(hdl, CURLOPT_URL, "telnet://192.168.99.129/");
    if (status != CURLE_OK) {
       YAEPG_ERROR("curl_easy_setopt");
-      return NULL;
+      return;
    }
 
    /* Set the read FILE * to the read end of the pipe */
-   status = curl_easy_setopt(hdl, CURLOPT_READDATA, fp);
+   status = curl_easy_setopt(hdl, CURLOPT_READDATA, readFp);
    if (status != CURLE_OK) {
       YAEPG_ERROR("curl_easy_setopt");
-      return NULL;
+      return;
    }
 
    /* Setup our own write function so we can discard output */
@@ -2341,18 +2352,18 @@ cReelVidWin::CurlThread(void *arg)
                              (curl_write_callback)&CurlWrite);
    if (status != CURLE_OK) {
       YAEPG_ERROR("curl_easy_setopt");
-      return NULL;
+      return;
    }
 
    /* Connect to eHD card, this call blocks until the connection is closed */
    status = curl_easy_perform(hdl);
    if (status != CURLE_OK) {
       YAEPG_ERROR("curl_easy_perform");
-      return NULL;
+      return;
    }
 
    YAEPG_INFO("Thread exit!");
-   return NULL;
+   return;
 }
 
 void
@@ -2370,7 +2381,7 @@ cReelVidWin::SendCmd(const char *cmd)
 bool
 cReelVidWin::Init(void)
 {
-   int pfds[2], error;
+   int pfds[2];
    char errStr[128];
 
    /* Init the curl library */
@@ -2402,13 +2413,8 @@ cReelVidWin::Init(void)
       return false;
    }
 
-   /* Create a thread to handle the telnet connection */
-   error = pthread_create(&thrd, NULL, (void *(*)(void *))&CurlThread, readFp);
-   if (error) {
-      snprintf(errStr, sizeof(errStr), "pthread_create: %s", strerror(error));
-      YAEPG_ERROR(errStr);
-      return false;
-   }
+   /* Start a thread to handle the telnet connection */
+   Start();
 
    return true;
 }
@@ -2540,7 +2546,7 @@ cYaepghd::~cYaepghd()
    delete eventDesc;
    delete eventDate;
    delete helpBar;
-#ifdef REEL_EHD
+#ifdef YAEPGHD_REEL_EHD
    reelVidWin->Close();
 #endif
 }
@@ -2583,7 +2589,7 @@ cYaepghd::Show(void)
       osd->vidWin.bpp = 12;
    }
 
-#ifdef REEL_EHD
+#ifdef YAEPGHD_REEL_EHD
    reelVidWin->Open(VID_WIN_GEOM);
 #endif
 
@@ -2852,9 +2858,9 @@ cYaepghd::SwitchToCurrentChannel(bool closeVidWin)
        * plane is sacled down.  To get around this problem we close/reopen the
        * video window across channel changes.
        */
-#ifdef REEL_EHD
+#ifdef YAEPGHD_REEL_EHD
       reelVidWin->Close();
-      usleep(100000); /* 1/10 of a second */
+      cCondWait::SleepMs(100);
 #endif
 
       ret = cDevice::PrimaryDevice()->SetChannel(gridChan, true);
@@ -2862,7 +2868,7 @@ cYaepghd::SwitchToCurrentChannel(bool closeVidWin)
          fprintf(stderr, "SetChannel(): %d\n", ret);
       }
 
-#ifdef REEL_EHD
+#ifdef YAEPGHD_REEL_EHD
       if (closeVidWin == false) {
          reelVidWin->Open(VID_WIN_GEOM);
       }
@@ -2927,11 +2933,15 @@ cYaepghd::Draw(void)
 class cMenuSetupYaepg : public cMenuSetupPage {
 private:
    int iNewHideMenuEntry;
+   int iNewReplaceOrgSchedule;
    int iNewChannelChange;
    int iNewTimeFormat;
    int iNewChannelOrder;
    int iNewThemeIndex;
-
+   const char *TIME_FORMATS[TIME_FORMAT_COUNT];
+   const char *CH_ORDER_FORMATS[CHANNEL_ORDER_COUNT];
+   const char *CH_CHANGE_MODES[CHANNEL_CHANGE_COUNT];
+   
 protected:
    virtual void Store(void);
 
@@ -2939,14 +2949,17 @@ public:
    cMenuSetupYaepg(void);
 };
 
+
 void cMenuSetupYaepg::Store(void)
 {
    iHideMenuEntry = iNewHideMenuEntry;
+   iReplaceOrgSchedule = iNewReplaceOrgSchedule;
    iChannelChange = iNewChannelChange;
    iTimeFormat    = iNewTimeFormat;
    iChannelOrder  = iNewChannelOrder;
 
    SetupStore("HideMenuEntry",   iHideMenuEntry);
+   SetupStore("ReplaceOrgSchedule", iReplaceOrgSchedule);
    SetupStore("ChannelChange",   iChannelChange);
    SetupStore("TimeFormat",      iTimeFormat);
    SetupStore("ChannelOrder",    iChannelOrder);
@@ -2957,6 +2970,16 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
 {
    char **themes;
    int numThemes;
+
+   TIME_FORMATS[TIME_FORMAT_24H]  = tr("24h");
+   TIME_FORMATS[TIME_FORMAT_12H]  = tr("12h");
+
+   CH_ORDER_FORMATS[CHANNEL_ORDER_UP]    = tr("Up");
+   CH_ORDER_FORMATS[CHANNEL_ORDER_DOWN]  = tr("Down");
+
+   CH_CHANGE_MODES[CHANNEL_CHANGE_MANUAL]       = tr("Manual");
+   CH_CHANGE_MODES[CHANNEL_CHANGE_MANUAL_INEPG] = tr("Manual in EPG");
+   CH_CHANGE_MODES[CHANNEL_CHANGE_AUTO_INEPG]   = tr("Automatic in EPG");
 
    cYaepgTheme::Themes(&themes, &numThemes);
    iNewThemeIndex = 0;
@@ -2974,12 +2997,14 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    iNewChannelChange = iChannelChange;
    iNewTimeFormat    = iTimeFormat;
    iNewChannelOrder  = iChannelOrder;
+   iNewReplaceOrgSchedule = iReplaceOrgSchedule;
 
    Add(new cMenuEditBoolItem (tr("Hide mainmenu entry"), &iNewHideMenuEntry));
-   Add(new cMenuEditStraItem (tr("Channel Change"), &iNewChannelChange, 3, CH_CHANGE_MODES));
-   Add(new cMenuEditStraItem (tr("Time format"), &iNewTimeFormat, 2, TIME_FORMATS));
-   Add(new cMenuEditStraItem (tr("Channel Order"), &iNewChannelOrder, 2, CH_ORDER_FORMATS));
-   Add(new cMenuEditStraItem (tr("Theme"), &iNewThemeIndex, numThemes, themes));
+   Add(new cMenuEditBoolItem (tr("Replace original schedule"), &iNewReplaceOrgSchedule));
+   Add(new cMenuEditStraItem (tr("Channel Change"), &iNewChannelChange, CHANNEL_CHANGE_COUNT, CH_CHANGE_MODES));
+   Add(new cMenuEditStraItem (tr("Time format"), &iNewTimeFormat, TIME_FORMAT_COUNT, TIME_FORMATS));
+   Add(new cMenuEditStraItem (tr("Channel Order"), &iNewChannelOrder, CHANNEL_ORDER_COUNT, CH_ORDER_FORMATS));
+   Add(new cMenuEditStraItem (trVDR("Setup.OSD$Theme"), &iNewThemeIndex, numThemes, themes));
 
    for (int i = 0; i < numThemes; i++) {
       free(themes[i]);
@@ -2993,8 +3018,8 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
  *****************************************************************************
  */
 static const char *VERSION        = "0.0.1";
-static const char *DESCRIPTION    = "HD version of yaepg";
-static const char *MAINMENUENTRY  = "Yaepghd";
+static const char *DESCRIPTION    = trNOOP("Yet another EPG in HD");
+static const char *MAINMENUENTRY  = trNOOP("YaepgHD");
 
 class cPluginYaepghd : public cPlugin {
 private:
@@ -3004,7 +3029,7 @@ public:
    cPluginYaepghd(void);
    virtual ~cPluginYaepghd();
    virtual const char *Version(void) { return VERSION; }
-   virtual const char *Description(void) { return DESCRIPTION; }
+   virtual const char *Description(void) { return tr(DESCRIPTION); }
    virtual const char *CommandLineHelp(void);
    virtual bool ProcessArgs(int argc, char *argv[]);
    virtual bool Initialize(void);
@@ -3014,7 +3039,7 @@ public:
    virtual void MainThreadHook(void);
    virtual cString Active(void);
    virtual time_t WakeupTime(void);
-   virtual const char *MainMenuEntry(void) { return MAINMENUENTRY; }
+   virtual const char *MainMenuEntry(void) { return tr(MAINMENUENTRY); }
    virtual cOsdObject *MainMenuAction(void);
    virtual cMenuSetupPage *SetupMenu(void);
    virtual bool SetupParse(const char *Name, const char *Value);
@@ -3060,7 +3085,7 @@ bool
 cPluginYaepghd::Start(void)
 {
    // Start any background activities the plugin shall perform.
-#ifdef REEL_EHD
+#ifdef YAEPGHD_REEL_EHD
    reelVidWin = new cReelVidWin;
    reelVidWin->Init();
 #endif
@@ -3071,7 +3096,7 @@ void
 cPluginYaepghd::Stop(void)
 {
    // Stop any background activities the plugin is performing.
-#ifdef REEL_EHD
+#ifdef YAEPGHD_REEL_EHD
    delete reelVidWin;
 #endif
 }
@@ -3134,7 +3159,18 @@ cPluginYaepghd::SetupParse(const char *Name, const char *Value)
 bool
 cPluginYaepghd::Service(const char *Id, void *Data)
 {
-   // Handle custom service requests from other plugins
+   if (strcmp(Id, "MainMenuHooksPatch-v1.0::osSchedule") == 0 && iReplaceOrgSchedule)
+   {
+      if (!Data) {
+         return true;
+      }
+      cOsdMenu **menu = (cOsdMenu**)Data;
+      if (menu) {
+         *menu = (cOsdMenu*)MainMenuAction();
+      }
+      return true;
+   }
+
    return false;
 }
 

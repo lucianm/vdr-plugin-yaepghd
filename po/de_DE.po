@@ -1,0 +1,93 @@
+# VDR plugin language source file.
+# Copyright (C) 2009 bball <bball950@yahoo.com>
+# This file is distributed under the same license as the yaepghd package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Yaepghd 0.0.1\n"
+"Report-Msgid-Bugs-To: <see README>\n"
+"POT-Creation-Date: 2009-01-28 20:31+0200\n"
+"PO-Revision-Date: 2009-01-28 10:51+0200\n"
+"Last-Translator: Klaus Schmidinger <kls@cadsoft.de>\n"
+"Language-Team: <vdr@linuxtv.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-15\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "No Info"
+msgstr "Keine Daten verfügbar."
+
+msgid "-12 Hours"
+msgstr ""
+
+msgid "+12 Hours"
+msgstr ""
+
+msgid "Switch"
+msgstr ""
+
+msgid "Screenshot"
+msgstr ""
+
+msgid "Once"
+msgstr "Sobald"
+
+msgid "Every"
+msgstr "Jeden"
+
+msgid "Mon-Fri"
+msgstr "Mo-Fr"
+
+msgid "Sun-Sat"
+msgstr "So-Sa"
+
+msgid "Start"
+msgstr "Anfang"
+
+msgid "Stop"
+msgstr "Halt"
+
+msgid "Frequency"
+msgstr "Frequenz"
+
+msgid "24h"
+msgstr ""
+
+msgid "12h"
+msgstr ""
+
+msgid "Up"
+msgstr ""
+
+msgid "Down"
+msgstr ""
+
+msgid "Manual"
+msgstr ""
+
+msgid "Manual in EPG"
+msgstr ""
+
+msgid "Automatic in EPG"
+msgstr ""
+
+msgid "Hide mainmenu entry"
+msgstr "Hauptmenüeintrag verstecken"
+
+msgid "Replace original schedule"
+msgstr ""
+
+msgid "Channel Change"
+msgstr ""
+
+msgid "Time format"
+msgstr "Zeit-Format"
+
+msgid "Channel Order"
+msgstr ""
+
+msgid "Yet another EPG in HD"
+msgstr ""
+
+msgid "YaepgHD"
+msgstr ""
