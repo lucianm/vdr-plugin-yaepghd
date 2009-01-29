@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Yaepghd 0.0.1\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2009-01-28 20:31+0200\n"
+"POT-Creation-Date: 2009-01-29 21:00+0200\n"
 "PO-Revision-Date: 2009-01-28 10:51+0200\n"
 "Last-Translator: Rolf Ahrenberg <rahrenbe@cc.hut.fi>\n"
 "Language-Team: <vdr@linuxtv.org>\n"
@@ -18,29 +18,26 @@ msgstr ""
 msgid "No Info"
 msgstr "Ei tietoja"
 
-msgid "-12 Hours"
-msgstr "-12h"
-
-msgid "+12 Hours"
-msgstr "+12h"
-
-msgid "Switch"
-msgstr "Vaihda"
-
 msgid "Screenshot"
-msgstr "Kuvakaappaus"
+msgstr "Ota kuva"
+
+msgid "Page up"
+msgstr "Sivu ylös"
+
+msgid "Page down"
+msgstr "Sivu alas"
 
 msgid "Once"
 msgstr "kerran"
 
-msgid "Every"
-msgstr "aina"
+msgid "Every day"
+msgstr "joka päivä"
 
 msgid "Mon-Fri"
-msgstr "Ma-pe"
+msgstr "ma-pe"
 
 msgid "Sun-Sat"
-msgstr "Su-la"
+msgstr "ma-su"
 
 msgid "Start"
 msgstr "Aloitus"
@@ -49,7 +46,7 @@ msgid "Stop"
 msgstr "Lopetus"
 
 msgid "Frequency"
-msgstr "Taajuus"
+msgstr "Toistuva"
 
 msgid "24h"
 msgstr "24h"
@@ -66,11 +63,11 @@ msgstr "laskeva"
 msgid "Manual"
 msgstr "manuaalinen"
 
-msgid "Manual in EPG"
-msgstr "manuaalinen; EPG"
+msgid "Semi-automatic"
+msgstr "puoliautomaattinen"
 
-msgid "Automatic in EPG"
-msgstr "automaattinen; EPG"
+msgid "Automatic"
+msgstr "automaattinen"
 
 msgid "Hide mainmenu entry"
 msgstr "Piilota valinta päävalikosta"

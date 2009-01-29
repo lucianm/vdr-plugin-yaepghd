@@ -125,8 +125,8 @@
 /* Manner in which channel is changed while in YAEPG */
 enum eChanneChangeType {
    CHANNEL_CHANGE_MANUAL,
-   CHANNEL_CHANGE_MANUAL_INEPG,
-   CHANNEL_CHANGE_AUTO_INEPG,
+   CHANNEL_CHANGE_SEMIAUTOMATIC,
+   CHANNEL_CHANGE_AUTOMATIC,
    CHANNEL_CHANGE_COUNT
 };
 
@@ -1821,10 +1821,10 @@ public:
 };
 
 const char *cYaepgHelpBar::helpStrs[4] = {
-   trNOOP("-12 Hours"),
-   trNOOP("+12 Hours"),
-   trNOOP("Switch"),
-   trNOOP("Screenshot")
+   trNOOP("Screenshot"),
+   trNOOP("Page up"),
+   trNOOP("Page down"),
+   trVDR("Button$Switch")
 };
 
 const tColor cYaepgHelpBar::dotColors[4] = {
@@ -2022,7 +2022,7 @@ public:
 
 const char *cYaepgRecDlg::freqStra[4] = {
    trNOOP("Once"),
-   trNOOP("Every"),
+   trNOOP("Every day"),
    trNOOP("Mon-Fri"),
    trNOOP("Sun-Sat"),
 };
@@ -2478,7 +2478,7 @@ private:
 
    std::vector< cChannel * > chanVec;
    const cEvent *event;
-   uint64_t lastInput;
+   cTimeMs lastInput;
    int directChan;
    bool needsRedraw;
 
@@ -2514,7 +2514,7 @@ cYaepghd::cYaepghd(void) :
    startTime((time_t)0),
    mainBmp(NULL),
    event(NULL),
-   lastInput((uint64_t)0),
+   lastInput(),
    directChan(0),
    needsRedraw(false),
    gridEvents(NULL),
@@ -2623,10 +2623,6 @@ cYaepghd::ProcessKey(eKeys key)
       case kBack:
          state = osEnd;
          break;
-      case kBlue:
-         cDevice::PrimaryDevice()->GrabImageFile("img.jpg", true, 256, -1, -1);
-         state = osContinue;
-         break;
       case kLeft:
          MoveCursor(DIR_LEFT);
          needsRedraw = true;
@@ -2640,7 +2636,7 @@ cYaepghd::ProcessKey(eKeys key)
       case kUp:
          MoveCursor(DIR_UP);
          needsRedraw = true;
-         if (iChannelChange == CHANNEL_CHANGE_AUTO_INEPG) {
+         if (iChannelChange == CHANNEL_CHANGE_AUTOMATIC) {
             SwitchToCurrentChannel();
          }
          state = osContinue;
@@ -2648,39 +2644,49 @@ cYaepghd::ProcessKey(eKeys key)
       case kDown:
          MoveCursor(DIR_DOWN);
          needsRedraw = true;
-         if (iChannelChange == CHANNEL_CHANGE_AUTO_INEPG) {
+         if (iChannelChange == CHANNEL_CHANGE_AUTOMATIC) {
             SwitchToCurrentChannel();
          }
          state = osContinue;
          break;
       case kOk:
          SwitchToCurrentChannel(true);
-         if (iChannelChange == CHANNEL_CHANGE_MANUAL_INEPG)
+         if (iChannelChange == CHANNEL_CHANGE_SEMIAUTOMATIC)
             state = osContinue;
          else
             state = osEnd;
          break;
       case kRed:
-      case kChanUp:
-         UpdateChans((iChannelOrder == CHANNEL_ORDER_UP ? 1 : -1) * GRID_NUM_CHANS * 1);
-         needsRedraw = true;
+         cDevice::PrimaryDevice()->GrabImageFile("yaepghd.jpg", true, 256, -1, -1);
          state = osContinue;
          break;
       case kGreen:
-         SwitchToCurrentChannel();
+         UpdateChans((iChannelOrder == CHANNEL_ORDER_UP ? 1 : -1) * GRID_NUM_CHANS);
+         needsRedraw = true;
          state = osContinue;
          break;
       case kYellow:
-      case kChanDn:
-         UpdateChans((iChannelOrder == CHANNEL_ORDER_UP ? 1 : -1) * GRID_NUM_CHANS * -1);
+         UpdateChans((iChannelOrder == CHANNEL_ORDER_UP ? -1 : 1) * GRID_NUM_CHANS);
          needsRedraw = true;
          state = osContinue;
+         break;
+      case kBlue:
+         SwitchToCurrentChannel();
+         state = osContinue;
+         break;
+      case kFastFwd:
+         state = osContinue;
+         // +12 hours
+         break;
+      case kFastRew:
+         state = osContinue;
+         // -12 hours
          break;
       case k0 ... k9:
          if (directChan || (key != k0)) {
             directChan = ((directChan * 10) + ((key & ~k_Repeat) - k0)) % 100000;
             gridDate->UpdateChan(directChan);
-            lastInput = cTimeMs::Now();
+            lastInput.Set(1000);
             needsRedraw = true;
          }
       default:
@@ -2689,7 +2695,7 @@ cYaepghd::ProcessKey(eKeys key)
    }
 
    /* Channel input timeout */
-   if (directChan && (cTimeMs::Now() - lastInput) > 1000) {
+   if (directChan && lastInput.TimedOut()) {
       YAEPG_INFO("Direct input timed out, channel %d", directChan);
 
       /* Look for a channel close to what the user entered */
@@ -2744,12 +2750,20 @@ cYaepghd::UpdateChans(cChannel *c)
    for (int i = 1; i < GRID_NUM_CHANS; i++) {
       if (iChannelOrder == CHANNEL_ORDER_UP) {
          while ((c = (cChannel *)c->Prev()) && (c->GroupSep()));
-         if (c == NULL)
-            c = Channels.First();
+         if (c == NULL) {
+            c = Channels.Last();
+            while (c && c->GroupSep()) {
+               c = (cChannel *)c->Prev();
+            }
+         }
       } else {
          while ((c = (cChannel *)c->Next()) && (c->GroupSep()));
-         if (c == NULL) 
-            c = Channels.Last();
+         if (c == NULL) {
+            c = Channels.First();
+            while (c && (c->GroupSep())) {
+               c = (cChannel *)c->Next();
+            }
+         }
       }
       chanVec[i] = c;
    }
@@ -2773,20 +2787,22 @@ cYaepghd::UpdateChans(int change)
 
    if (change > 0) {
       for (int i = 0; i < change; i++) {
-         while ((c = (cChannel *)c->Next()) && (c->GroupSep())) {
-            ;
-         }
+         while ((c = (cChannel *)c->Next()) && (c->GroupSep()));
          if (c == NULL) {
             c = Channels.First();
+            while (c && c->GroupSep()) {
+               c = (cChannel *)c->Next();
+            }
          }
       }
    } else if (change < 0) {
       for (int i = 0; i > change; i--) {
-         while ((c = (cChannel *)c->Prev()) && (c->GroupSep())) {
-            ;
-         }
+         while ((c = (cChannel *)c->Prev()) && (c->GroupSep()));
          if (c == NULL) {
             c = Channels.Last();
+            while (c && c->GroupSep()) {
+               c = (cChannel *)c->Prev();
+            }
          }
       }
    }
@@ -2977,13 +2993,13 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    CH_ORDER_FORMATS[CHANNEL_ORDER_UP]    = tr("Up");
    CH_ORDER_FORMATS[CHANNEL_ORDER_DOWN]  = tr("Down");
 
-   CH_CHANGE_MODES[CHANNEL_CHANGE_MANUAL]       = tr("Manual");
-   CH_CHANGE_MODES[CHANNEL_CHANGE_MANUAL_INEPG] = tr("Manual in EPG");
-   CH_CHANGE_MODES[CHANNEL_CHANGE_AUTO_INEPG]   = tr("Automatic in EPG");
+   CH_CHANGE_MODES[CHANNEL_CHANGE_MANUAL]        = tr("Manual");
+   CH_CHANGE_MODES[CHANNEL_CHANGE_SEMIAUTOMATIC] = tr("Semi-automatic");
+   CH_CHANGE_MODES[CHANNEL_CHANGE_AUTOMATIC]     = tr("Automatic");
 
    cYaepgTheme::Themes(&themes, &numThemes);
    iNewThemeIndex = 0;
-   if (sThemeName) {
+   if (*sThemeName) {
       for (int i = 0; i < numThemes; i++) {
          if (strcmp(sThemeName, themes[i]) == 0) {
             iNewThemeIndex = i;
@@ -3022,9 +3038,6 @@ static const char *DESCRIPTION    = trNOOP("Yet another EPG in HD");
 static const char *MAINMENUENTRY  = trNOOP("YaepgHD");
 
 class cPluginYaepghd : public cPlugin {
-private:
-   cYaepghd *yaepg;
-
 public:
    cPluginYaepghd(void);
    virtual ~cPluginYaepghd();
@@ -3131,8 +3144,7 @@ cPluginYaepghd::WakeupTime(void)
 cOsdObject *
 cPluginYaepghd::MainMenuAction(void)
 {
-   yaepg = new cYaepghd;
-   return yaepg;
+   return new cYaepghd;
 }
 
 cMenuSetupPage *

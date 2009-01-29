@@ -48,7 +48,7 @@ INCLUDES += -I$(VDRDIR)/include -I.
 
 LIBS = -lMagick++
 
-INCLUDES += $(shell pkg-config --cflags-only-I Magick++)
+INCLUDES += $(shell pkg-config --cflags-only-I Magick++ 2>/dev/null)
 
 DEFINES += -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 

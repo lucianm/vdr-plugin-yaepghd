@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Yaepghd 0.0.1\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2009-01-28 20:31+0200\n"
+"POT-Creation-Date: 2009-01-29 21:00+0200\n"
 "PO-Revision-Date: 2009-01-28 10:51+0200\n"
 "Last-Translator: Klaus Schmidinger <kls@cadsoft.de>\n"
 "Language-Team: <vdr@linuxtv.org>\n"
@@ -17,23 +17,20 @@ msgstr ""
 msgid "No Info"
 msgstr "Keine Daten verfügbar."
 
-msgid "-12 Hours"
-msgstr ""
-
-msgid "+12 Hours"
-msgstr ""
-
-msgid "Switch"
-msgstr ""
-
 msgid "Screenshot"
+msgstr ""
+
+msgid "Page up"
+msgstr ""
+
+msgid "Page down"
 msgstr ""
 
 msgid "Once"
 msgstr "Sobald"
 
-msgid "Every"
-msgstr "Jeden"
+msgid "Every day"
+msgstr "Jeden Tag"
 
 msgid "Mon-Fri"
 msgstr "Mo-Fr"
@@ -65,10 +62,10 @@ msgstr ""
 msgid "Manual"
 msgstr ""
 
-msgid "Manual in EPG"
+msgid "Semi-automatic"
 msgstr ""
 
-msgid "Automatic in EPG"
+msgid "Automatic"
 msgstr ""
 
 msgid "Hide mainmenu entry"

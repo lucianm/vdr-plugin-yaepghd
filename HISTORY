@@ -12,5 +12,8 @@ VDR Plugin 'yaepghd' Revision History
 - Added support for MainMenuHooks patch (Rolf Ahrenberg).
 - Renamed REEL_EHD to YAEPGHD_REEL_EHD and moved the setting into Makefile (Rolf Ahrenberg).
 - Fixed couple of crash bugs (Rolf Ahrenberg).
+- Changed color key layout to better match the VDR standard (Rolf Ahrenberg).
+- Added Finnish translation (Rolf Ahrenberg).
+- Fixed a bug in channel listing (Rolf Ahrenberg).
 
 TODO: Video Window doesn't scale back to normal when quiting the plugin
