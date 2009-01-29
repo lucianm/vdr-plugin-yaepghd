@@ -562,9 +562,9 @@ cYaepgTheme::LoadImage(char *Filename)
       const Magick::PixelPacket *pix = images[0].getConstPixels(0, 0, w, h);
       for (int iy = 0; iy < h; ++iy) {  
          for (int ix = 0; ix < w; ++ix) {
-            tColor col = (~(pix->opacity * 255 / MaxRGB) << 24) |
-                          ((pix->red * 255 / MaxRGB) << 16) |
-                          ((pix->green * 255 / MaxRGB) << 8) |
+            tColor col = (~(int)(pix->opacity * 255 / MaxRGB) << 24) |
+                          ((int)(pix->red * 255 / MaxRGB) << 16) |
+                          ((int)(pix->green * 255 / MaxRGB) << 8) |
                            (pix->blue * 255 / MaxRGB);
             bmp->DrawPixel(ix, iy, col);
             ++pix;
