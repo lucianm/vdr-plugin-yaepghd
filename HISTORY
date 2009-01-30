@@ -15,5 +15,5 @@ VDR Plugin 'yaepghd' Revision History
 - Changed color key layout to better match the VDR standard (Rolf Ahrenberg).
 - Added Finnish translation (Rolf Ahrenberg).
 - Fixed a bug in channel listing (Rolf Ahrenberg).
-
-TODO: Video Window doesn't scale back to normal when quiting the plugin
+- Fixed theme selection on the setup page (Rolf Ahrenberg).
+- Fixed cPlugin::ConfigDirectory() to called only from main thread (Rolf Ahrenberg).

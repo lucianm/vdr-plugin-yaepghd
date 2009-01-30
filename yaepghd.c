@@ -151,12 +151,13 @@ using namespace Magick;
 /**
  * Private Data
  */
-static int iHideMenuEntry              = false;
-static int iReplaceOrgSchedule         = false;
-static int iChannelChange              = CHANNEL_CHANGE_MANUAL;
-static int iTimeFormat                 = TIME_FORMAT_12H;
-static int iChannelOrder               = CHANNEL_ORDER_DOWN;
-static char sThemeName[MaxThemeName]   = "default";
+static int         iHideMenuEntry           = false;
+static int         iReplaceOrgSchedule      = false;
+static int         iChannelChange           = CHANNEL_CHANGE_MANUAL;
+static int         iTimeFormat              = TIME_FORMAT_12H;
+static int         iChannelOrder            = CHANNEL_ORDER_DOWN;
+static std::string sThemeName               = "default";
+static std::string sThemeDir                = "";
 
 /**
  * Pirvate Classes/Function Prototypes
@@ -252,7 +253,7 @@ private:
 public:
    static cYaepgTheme *Instance(void);
    static void Destroy(void);
-   bool Load(char *Theme);
+   bool Load(std::string Theme);
    static void Themes(char ***_themes, int *_numThemes);
    tThemeElement Element(const char *name) { return themeMap[std::string(name)]; }
 };
@@ -366,7 +367,7 @@ cYaepgTheme::Themes(char ***_themes, int *_numThemes)
    *_numThemes = 0;
    *_themes = NULL;
 
-   dir = opendir(cPlugin::ConfigDirectory("yaepghd"));
+   dir = opendir(sThemeDir.c_str());
    if (dir == NULL) {
       perror("opendir");
       return;
@@ -384,6 +385,8 @@ cYaepgTheme::Themes(char ***_themes, int *_numThemes)
       *ext = '\0';
       themes = (char **) realloc(themes, sizeof(char *) * (numThemes + 1));
       themes[numThemes++] = strdup(dp->d_name);
+
+      YAEPG_INFO("Found theme: %s", dp->d_name);
    }
    *_themes = themes;
    *_numThemes = numThemes;
@@ -412,19 +415,18 @@ cYaepgTheme::AddElement(const char *name, eElementType type)
 }
 
 bool
-cYaepgTheme::Load(char *Theme)
+cYaepgTheme::Load(std::string Theme)
 {
    char themeFile[128], lineBuf[128], *s, *key, *val;
    FILE *fp;
 
-   YAEPG_INFO("Loading theme: %s", Theme);
+   YAEPG_INFO("Loading theme: %s", Theme.c_str());
 
-   snprintf(themeFile, sizeof(themeFile), "%s/%s.theme",
-            cPlugin::ConfigDirectory("yaepghd"), Theme);
+   snprintf(themeFile, sizeof(themeFile), "%s/%s.theme", sThemeDir.c_str(), Theme.c_str());
 
    fp = fopen(themeFile, "r");
    if (fp == NULL) {
-      YAEPG_ERROR("Could not open teme file: %s", Theme);
+      YAEPG_ERROR("Could not open teme file: %s", Theme.c_str());
       return false;
    }
 
@@ -538,8 +540,7 @@ cYaepgTheme::LoadImage(char *Filename)
    cBitmap *bmp = NULL;
    int index = -1;
 
-   snprintf(fullFilePath, sizeof(fullFilePath), "%s/%s",
-            cPlugin::ConfigDirectory("yaepghd"), Filename);
+   snprintf(fullFilePath, sizeof(fullFilePath), "%s/%s", sThemeDir.c_str(), Filename);
 
    YAEPG_INFO("Loading image '%s'", fullFilePath);
 
@@ -2564,7 +2565,7 @@ cYaepghd::Show(void)
    /* Load the theme */
    theme = cYaepgTheme::Instance();
    if (theme->Load(sThemeName) == false) {
-      YAEPG_ERROR("Error loading theme %s", sThemeName);
+      YAEPG_ERROR("Error loading theme %s", sThemeName.c_str());
       return;
    }
 
@@ -2954,6 +2955,8 @@ private:
    int iNewTimeFormat;
    int iNewChannelOrder;
    int iNewThemeIndex;
+   char **themes;
+   int numThemes;
    const char *TIME_FORMATS[TIME_FORMAT_COUNT];
    const char *CH_ORDER_FORMATS[CHANNEL_ORDER_COUNT];
    const char *CH_CHANGE_MODES[CHANNEL_CHANGE_COUNT];
@@ -2963,35 +2966,34 @@ protected:
 
 public:
    cMenuSetupYaepg(void);
+   ~cMenuSetupYaepg();
 };
 
 
 void cMenuSetupYaepg::Store(void)
 {
-   iHideMenuEntry = iNewHideMenuEntry;
+   iHideMenuEntry      = iNewHideMenuEntry;
    iReplaceOrgSchedule = iNewReplaceOrgSchedule;
-   iChannelChange = iNewChannelChange;
-   iTimeFormat    = iNewTimeFormat;
-   iChannelOrder  = iNewChannelOrder;
+   iChannelChange      = iNewChannelChange;
+   iTimeFormat         = iNewTimeFormat;
+   iChannelOrder       = iNewChannelOrder;
+   sThemeName          = themes[iNewThemeIndex];
 
-   SetupStore("HideMenuEntry",   iHideMenuEntry);
+   SetupStore("HideMenuEntry",      iHideMenuEntry);
    SetupStore("ReplaceOrgSchedule", iReplaceOrgSchedule);
-   SetupStore("ChannelChange",   iChannelChange);
-   SetupStore("TimeFormat",      iTimeFormat);
-   SetupStore("ChannelOrder",    iChannelOrder);
-   SetupStore("Theme",           sThemeName);
+   SetupStore("ChannelChange",      iChannelChange);
+   SetupStore("TimeFormat",         iTimeFormat);
+   SetupStore("ChannelOrder",       iChannelOrder);
+   SetupStore("Theme",              sThemeName.c_str());
 }
 
 cMenuSetupYaepg::cMenuSetupYaepg(void)
 {
-   char **themes;
-   int numThemes;
+   TIME_FORMATS[TIME_FORMAT_24H] = tr("24h");
+   TIME_FORMATS[TIME_FORMAT_12H] = tr("12h");
 
-   TIME_FORMATS[TIME_FORMAT_24H]  = tr("24h");
-   TIME_FORMATS[TIME_FORMAT_12H]  = tr("12h");
-
-   CH_ORDER_FORMATS[CHANNEL_ORDER_UP]    = tr("Up");
-   CH_ORDER_FORMATS[CHANNEL_ORDER_DOWN]  = tr("Down");
+   CH_ORDER_FORMATS[CHANNEL_ORDER_UP]   = tr("Up");
+   CH_ORDER_FORMATS[CHANNEL_ORDER_DOWN] = tr("Down");
 
    CH_CHANGE_MODES[CHANNEL_CHANGE_MANUAL]        = tr("Manual");
    CH_CHANGE_MODES[CHANNEL_CHANGE_SEMIAUTOMATIC] = tr("Semi-automatic");
@@ -2999,9 +3001,9 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
 
    cYaepgTheme::Themes(&themes, &numThemes);
    iNewThemeIndex = 0;
-   if (*sThemeName) {
+   if (!sThemeName.empty()) {
       for (int i = 0; i < numThemes; i++) {
-         if (strcmp(sThemeName, themes[i]) == 0) {
+         if (strcmp(sThemeName.c_str(), themes[i]) == 0) {
             iNewThemeIndex = i;
          }
       }
@@ -3017,15 +3019,20 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
 
    Add(new cMenuEditBoolItem (tr("Hide mainmenu entry"), &iNewHideMenuEntry));
    Add(new cMenuEditBoolItem (tr("Replace original schedule"), &iNewReplaceOrgSchedule));
-   Add(new cMenuEditStraItem (tr("Channel Change"), &iNewChannelChange, CHANNEL_CHANGE_COUNT, CH_CHANGE_MODES));
+   Add(new cMenuEditStraItem (tr("Channel change"), &iNewChannelChange, CHANNEL_CHANGE_COUNT, CH_CHANGE_MODES));
    Add(new cMenuEditStraItem (tr("Time format"), &iNewTimeFormat, TIME_FORMAT_COUNT, TIME_FORMATS));
-   Add(new cMenuEditStraItem (tr("Channel Order"), &iNewChannelOrder, CHANNEL_ORDER_COUNT, CH_ORDER_FORMATS));
+   Add(new cMenuEditStraItem (tr("Channel order"), &iNewChannelOrder, CHANNEL_ORDER_COUNT, CH_ORDER_FORMATS));
    Add(new cMenuEditStraItem (trVDR("Setup.OSD$Theme"), &iNewThemeIndex, numThemes, themes));
+}
 
+cMenuSetupYaepg::~cMenuSetupYaepg()
+{
    for (int i = 0; i < numThemes; i++) {
       free(themes[i]);
    }
-   free(themes);
+   if (themes) {
+      free(themes);
+   }
 }
 
 /*
@@ -3091,6 +3098,7 @@ bool
 cPluginYaepghd::Initialize(void)
 {
    // Initialize any background activities the plugin shall perform.
+   sThemeDir = cPlugin::ConfigDirectory(PLUGIN_NAME_I18N);
    return true;
 }
 
@@ -3157,13 +3165,15 @@ cPluginYaepghd::SetupMenu(void)
 bool
 cPluginYaepghd::SetupParse(const char *Name, const char *Value)
 {
+   char themeName[MaxThemeName];
+
    // Parse your own setup parameters and store their values.
-   if (!strcasecmp(Name, "HideMenuEntry"))      { iHideMenuEntry = atoi(Value); }
+   if      (!strcasecmp(Name, "HideMenuEntry")) { iHideMenuEntry = atoi(Value); }
    else if (!strcasecmp(Name, "ChannelChange")) { iChannelChange = atoi(Value); }
    else if (!strcasecmp(Name, "TimeFormat"))    { iTimeFormat = atoi(Value); }
    else if (!strcasecmp(Name, "ChannelOrder"))  { iChannelOrder = atoi(Value); }
-   else if (!strcasecmp(Name, "Theme"))         { Utf8Strn0Cpy(sThemeName, Value, MaxThemeName); }
-   else { return false; }
+   else if (!strcasecmp(Name, "Theme"))         { Utf8Strn0Cpy(themeName, Value, sizeof(themeName)); sThemeName = themeName; }
+   else                                         { return false; }
 
    return true;
 }
