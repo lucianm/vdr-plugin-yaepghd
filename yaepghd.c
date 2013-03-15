@@ -3,40 +3,41 @@
  *
  * See the README file for copyright information and how to reach the author.
  *
- * $Id$
+ * Community Edition
  */
 
 /**
  * Includes
  */
+#include <locale.h>
+#include <langinfo.h>
 #include <string>
 #include <vector>
 #include <map>
 #include <assert.h>
 #include <Magick++.h>
+#include <getopt.h>
 #ifdef YAEPGHD_REEL_EHD
 #include <curl/curl.h>
 #endif
 
 #include <vdr/config.h>
-#include <vdr/tools.h>
 #include <vdr/plugin.h>
 #include <vdr/osd.h>
+#include <vdr/timers.h>
 #include <vdr/device.h>
-#include <vdr/thread.h>
-
-#ifndef YAEPGHDVERSNUM
-#error "You must apply the yaepghd patch for VDR!"
-#endif
 
 #if defined(APIVERSNUM) && APIVERSNUM < 10600
 #error "VDR-1.6.0 API version or greater is required!"
 #endif
 
+// To avoid problems with the old MainMenuHooks-v1.0 patch uncomment next line.
+// #undef MAINMENUHOOKSVERSNUM 
+
 /**
  * Macros
  */
-
+//#define DEBUG
 #ifdef DEBUG
 #define ASSERT                   assert
 #define YAEPG_ERROR(...)         yaepg_error(__PRETTY_FUNCTION__, __VA_ARGS__)
@@ -70,9 +71,11 @@
 #define GRID_TIME_FONT           THEME_FONT("gridTimeFont")
 #define GRID_DATE_FONT           THEME_FONT("gridDateFont")
 #define EVENT_TITLE_FONT         THEME_FONT("eventTitleFont")
+#define EVENT_INFO_FONT          THEME_FONT("eventInfoFont")
 #define EVENT_TIME_FONT          THEME_FONT("eventTimeFont")
 #define EVENT_DESC_FONT          THEME_FONT("eventDescFont")
 #define EVENT_DATE_FONT          THEME_FONT("eventDateFont")
+#define HELP_BAR_FONT            THEME_FONT("helpFont")
 #define GRID_EVENT_COLOR         THEME_COLOR("gridEventColor")
 #define GRID_SEL_FG              THEME_COLOR("gridSelFg")
 #define GRID_SEL_BG              THEME_COLOR("gridSelBg")
@@ -81,18 +84,22 @@
 #define GRID_DATE_COLOR          THEME_COLOR("gridDateColor")
 #define GRID_SEP_COLOR           THEME_COLOR("gridSepColor")
 #define EVENT_TITLE_COLOR        THEME_COLOR("eventTitleColor")
+#define EVENT_INFO_COLOR         THEME_COLOR("eventInfoColor")
 #define EVENT_TIME_COLOR         THEME_COLOR("eventTimeColor")
 #define EVENT_DESC_COLOR         THEME_COLOR("eventDescColor")
 #define EVENT_DATE_COLOR         THEME_COLOR("eventDateColor")
 #define TLINE_BOX_COLOR          THEME_COLOR("tlineBoxColor")
+#define HELP_BAR_COLOR           THEME_COLOR("helpColor")
 #define GRID_EVENT_GEOM          THEME_GEOM("gridEventGeom")
 #define GRID_CHAN_GEOM           THEME_GEOM("gridChanGeom")
 #define GRID_TIME_GEOM           THEME_GEOM("gridTimeGeom")
 #define GRID_DATE_GEOM           THEME_GEOM("gridDateGeom")
 #define EVENT_TITLE_GEOM         THEME_GEOM("eventTitleGeom")
+#define EVENT_INFO_GEOM          THEME_GEOM("eventInfoGeom")
 #define EVENT_TIME_GEOM          THEME_GEOM("eventTimeGeom")
 #define EVENT_DESC_GEOM          THEME_GEOM("eventDescGeom")
 #define EVENT_DATE_GEOM          THEME_GEOM("eventDateGeom")
+#define EVENT_EPGIMAGE_GEOM      THEME_GEOM("eventEpgImageGeom")
 #define TLINE_LOC_GEOM           THEME_GEOM("tlineLocGeom")
 #define TLINE_BOX_GEOM           THEME_GEOM("tlineBoxGeom")
 #define VID_WIN_GEOM             THEME_GEOM("vidWinGeom")
@@ -103,6 +110,7 @@
 #define GRID_HORIZ_SPACE         THEME_IVAL("gridHorizSpace")
 #define TEXT_BORDER              THEME_IVAL("textBorder")
 #define TEXT_SPACE               THEME_IVAL("textSpace")
+#define EVENT_INFO_ALIGN         THEME_IVAL("eventInfoAlign")
 
 #define REC_DLG_IMG              THEME_IMAGE("recDlgImage")
 #define REC_DLG_FONT             THEME_FONT("recDlgFont")
@@ -122,10 +130,10 @@
 #define MSG_BOX_COLOR            THEME_COLOR("msgBoxColor")
 #define MSG_BOX_GEOM             THEME_GEOM("msgBoxGeom")
 
-/* Manner in which channel is changed while in YAEPG */
+/* Manner in which channel is changed while in YAEPGHD */
 enum eChanneChangeType {
-   CHANNEL_CHANGE_MANUAL,
-   CHANNEL_CHANGE_SEMIAUTOMATIC,
+   CHANNEL_CHANGE_CLOSE,
+   CHANNEL_CHANGE_OPEN,
    CHANNEL_CHANGE_AUTOMATIC,
    CHANNEL_CHANGE_COUNT
 };
@@ -152,12 +160,33 @@ using namespace Magick;
  * Private Data
  */
 static int         iHideMenuEntry           = false;
+static char        sMainMenuEntry[MaxFileName] = "";
+#if defined(MAINMENUHOOKSVERSION) 
+#if MAINMENUHOOKSVERSNUM >= 10001
 static int         iReplaceOrgSchedule      = false;
-static int         iChannelChange           = CHANNEL_CHANGE_MANUAL;
+#endif
+#endif
+static int         iChannelChange           = CHANNEL_CHANGE_CLOSE;
+static int         iSwitchOK                = false;  
 static int         iTimeFormat              = TIME_FORMAT_12H;
 static int         iChannelOrder            = CHANNEL_ORDER_DOWN;
+static int         iChannelNumber           = false;
+static int         iRecDlgRed               = false;  
+static int         iInfoSymbols             = false;  
+static int         iSwitchTimer             = false;  
+static int         iSwitchMinsBefore        = 1;
+static int         iRemoteTimer             = false;  
+static int         iEpgImages               = false;  
+static int         iResizeImages            = 0;
+static int         iImageExtension          = 0;
 static std::string sThemeName               = "default";
 static std::string sThemeDir                = "";
+static std::string sEpgImagesDir            = "/video/epgimages";
+static int         iVDRSymbols              = false;  
+cPlugin*           pEPGSearch              = NULL;
+cPlugin*           pRemoteTimers           = NULL;
+
+const char *imageExtensionTexts[3] = { "png", "jpg", "xpm" };
 
 /**
  * Pirvate Classes/Function Prototypes
@@ -171,6 +200,45 @@ struct tGeom {
    int y;
    int w;
    int h;
+};
+
+// Data structure for service "Epgsearch-switchtimer-v1.0"
+struct Epgsearch_switchtimer_v1_0
+{
+// in
+      const cEvent* event;
+      int mode;                  // mode (0=query existance, 1=add/modify, 2=delete)
+// in/out
+      int switchMinsBefore;
+      int announceOnly;
+// out   		
+      bool success;              // result
+};
+
+// Data structure for RemoteTimers services
+struct RemoteTimers_Event_v1_0 {
+//in
+        const cEvent    *event;
+//out
+        cTimer          *timer;
+        cString         errorMsg;
+};
+
+struct RemoteTimers_GetMatch_v1_0 {
+//in
+	const cEvent	*event;
+//out
+	cTimer		*timer;
+	int		timerMatch;
+	int		timerType;
+	bool		isRemote;
+};
+
+struct RemoteTimers_Timer_v1_0 {
+//in+out
+	cTimer		*timer;
+//out
+	cString		errorMsg;
 };
 
 /* Logging functions */
@@ -198,6 +266,57 @@ yaepg_info(const char *func, const char *fmt, ...)
    va_end(ap);
    snprintf(iLine, sizeof(iLine), "INFO: YaEPGHD: %s: %s", func, iMsg);
    isyslog("%s", iLine);
+}
+
+/*
+ *****************************************************************************
+ * Icons
+ *****************************************************************************
+ */
+class Icons
+{
+  private:
+    static bool IsUTF8;
+  public:
+    static void InitCharSet();
+    static const char* ArrowCCW(){return IsUTF8?"\ue000":"\x80";}
+    static const char* Recording(){return IsUTF8?"\ue00b":"\x8b";}
+    static const char* Watch(){return IsUTF8?"\ue00c":"\x8c";}
+    static const char* WatchUpperHalf(){return IsUTF8?"\ue014":"\x94";}
+    static const char* WatchLowerHalf(){return IsUTF8?"\ue015":"\x95";}
+    static const char* Running(){return IsUTF8?"\ue012":"\x92";}
+    static const char* VPS(){return IsUTF8?"\ue013":"\x93";}
+    static const char* Blank(){return IsUTF8?"\ue003":"\x83";}
+};
+
+bool Icons::IsUTF8=false;
+
+void Icons::InitCharSet()
+{
+  // Taken from VDR's vdr.c
+  char *CodeSet=NULL;
+  if(setlocale(LC_CTYPE, ""))
+    CodeSet=nl_langinfo(CODESET);
+  else
+  {
+    char *LangEnv=getenv("LANG"); // last resort in case locale stuff isn't installed
+    if(LangEnv)
+    {
+      CodeSet=strchr(LangEnv,'.');
+      if(CodeSet)
+        CodeSet++; // skip the dot
+    }
+  }
+
+  if(CodeSet && strcasestr(CodeSet,"UTF-8")!=0)
+    IsUTF8=true;
+    
+  cStringList fontlist;
+  cFont::GetAvailableFontNames(&fontlist);
+  if (fontlist.Find("VDRSymbols Sans:Book") > 0) {
+     iVDRSymbols =true;
+     YAEPG_INFO("Found VDRSymbols font. InfoSymbols enabled");
+  }
 }
 
 /*
@@ -272,9 +391,11 @@ cYaepgTheme::cYaepgTheme(void)
    AddElement("gridTimeFont", THEME_FONT);
    AddElement("gridDateFont", THEME_FONT);
    AddElement("eventTitleFont", THEME_FONT);
+   AddElement("eventInfoFont", THEME_FONT);
    AddElement("eventTimeFont", THEME_FONT);
    AddElement("eventDescFont", THEME_FONT);
    AddElement("eventDateFont", THEME_FONT);
+   AddElement("helpFont", THEME_FONT);
    AddElement("gridEventColor", THEME_COLOR);
    AddElement("gridSelFg", THEME_COLOR);
    AddElement("gridSelBg", THEME_COLOR);
@@ -283,18 +404,22 @@ cYaepgTheme::cYaepgTheme(void)
    AddElement("gridTimeColor", THEME_COLOR);
    AddElement("gridDateColor", THEME_COLOR);
    AddElement("eventTitleColor", THEME_COLOR);
+   AddElement("eventInfoColor", THEME_COLOR);
    AddElement("eventTimeColor", THEME_COLOR);
    AddElement("eventDescColor", THEME_COLOR);
    AddElement("eventDateColor", THEME_COLOR);
    AddElement("tlineBoxColor", THEME_COLOR);
+   AddElement("helpColor", THEME_COLOR);
    AddElement("gridEventGeom", THEME_GEOM);
    AddElement("gridChanGeom", THEME_GEOM);
    AddElement("gridTimeGeom", THEME_GEOM);
    AddElement("gridDateGeom", THEME_GEOM);
    AddElement("eventTitleGeom", THEME_GEOM);
+   AddElement("eventInfoGeom", THEME_GEOM);
    AddElement("eventTimeGeom", THEME_GEOM);
    AddElement("eventDescGeom", THEME_GEOM);
    AddElement("eventDateGeom", THEME_GEOM);
+   AddElement("eventEpgImageGeom", THEME_GEOM);
    AddElement("tlineLocGeom", THEME_GEOM);
    AddElement("tlineBoxGeom", THEME_GEOM);
    AddElement("vidWinGeom", THEME_GEOM);
@@ -305,6 +430,7 @@ cYaepgTheme::cYaepgTheme(void)
    AddElement("rightArrowWidth", THEME_IVAL);
    AddElement("textBorder", THEME_IVAL);
    AddElement("textSpace", THEME_IVAL);
+   AddElement("eventInfoAlign", THEME_IVAL);
 
    AddElement("recDlgImage", THEME_IMAGE);
    AddElement("recDlgGeom", THEME_GEOM);
@@ -566,7 +692,7 @@ cYaepgTheme::LoadImage(char *Filename)
             tColor col = (~(int)(pix->opacity * 255 / MaxRGB) << 24) |
                           ((int)(pix->red * 255 / MaxRGB) << 16) |
                           ((int)(pix->green * 255 / MaxRGB) << 8) |
-                           (pix->blue * 255 / MaxRGB);
+                           (int)(pix->blue * 255 / MaxRGB);
             bmp->DrawPixel(ix, iy, col);
             ++pix;
          }
@@ -765,6 +891,10 @@ cYaepgTextBox::Generate(void)
       *s-- = '\0';
    }
 
+      /* Remove newlines in descriptions */
+   char *newlineText = tokText;
+   strreplace(newlineText, '\n', ' ');
+   
    /* Break text up into lines */
    char *line, *nextLine = tokText;
 
@@ -1334,9 +1464,19 @@ cYaepgGridChans::Generate(void)
       chanInfo[i].nameBox.FgColor(GRID_CHAN_COLOR);
       chanInfo[i].nameBox.BgColor(clrTransparent);
       chanInfo[i].nameBox.Flags((eTextFlags)(TBOX_VALIGN_LEFT | TBOX_HALIGN_CENTER));
-      chanInfo[i].nameBox.X(geom.x + (geom.w / 2));
+      
+	  if (iChannelNumber)
+	  {
+	     chanInfo[i].nameBox.X(geom.x + (geom.w / 2));
+		 chanInfo[i].nameBox.W(geom.w / 2);
+	  }
+	  else
+	  {
+	     chanInfo[i].nameBox.X(geom.x);
+		 chanInfo[i].nameBox.W(geom.w );
+	  }
+	  
       chanInfo[i].nameBox.Y(geom.y + ROUND((float)i * (chanRowHeight + (float)horizSpace)));
-      chanInfo[i].nameBox.W(geom.w / 2);
       chanInfo[i].nameBox.H(ROUND(chanRowHeight));
       chanInfo[i].nameBox.Generate();
 
@@ -1354,8 +1494,9 @@ cYaepgGridChans::Draw(cBitmap *bmp)
    YAEPG_INFO("Drawing grid channels at (%d %d)", geom.x, geom.y);
 
    for (int i = 0; i < (int)chanInfo.size(); i++) {
-      chanInfo[i].numBox.Draw(bmp);
-      chanInfo[i].nameBox.Draw(bmp);
+       if (iChannelNumber)
+	      chanInfo[i].numBox.Draw(bmp);
+       chanInfo[i].nameBox.Draw(bmp);
    }
 }
 
@@ -1460,12 +1601,7 @@ cYaepgGridDate::cYaepgGridDate(time_t _t)
 void
 cYaepgGridDate::UpdateTime(time_t _t)
 {
-   struct tm locTime;
-
-   t = _t;
-   localtime_r(&t, &locTime);
-   snprintf(dateStr, sizeof(dateStr), "%s %d/%d",
-            *WeekDayName((locTime.tm_wday + 6) % 6), locTime.tm_mon, locTime.tm_mday);
+   sprintf(dateStr,"%s", *DateString(_t));
    Generate();
 }
 
@@ -1549,6 +1685,242 @@ cYaepgEventTitle::Draw(cBitmap *bmp)
    YAEPG_INFO("Drawing event title at (%d %d)", geom.x, geom.y);
 
    box.Draw(bmp);
+}
+
+/*
+ *****************************************************************************
+ * cYaepgEventInfo
+ *****************************************************************************
+ */
+class cYaepgEventInfo {
+private:
+   tGeom geom;
+   const cEvent *event;
+   cYaepgTextBox boxes[3];
+
+public:
+   cYaepgEventInfo(const cEvent *_event);
+   void UpdateEvent(const cEvent *_event) { event = _event; Generate(); }
+   void Generate(void);
+   void Draw(cBitmap *bmp);
+};
+
+cYaepgEventInfo::cYaepgEventInfo(const cEvent *_event) :
+   event(_event)
+{
+   geom = EVENT_INFO_GEOM;
+   Generate();
+}
+
+void
+cYaepgEventInfo::Generate(void)
+{
+   cString buffer[3];
+   const char* t=NULL;
+   const char* v=NULL;
+   const char* r=NULL;
+   
+   int timerMatch=tmNone; 
+   cTimer* ti;
+
+   if (iRemoteTimer && pRemoteTimers && event) {  
+      RemoteTimers_GetMatch_v1_0 rtMatch;
+      rtMatch.event = event;
+      pRemoteTimers->Service("RemoteTimers::GetMatch-v1.0", &rtMatch);
+      timerMatch = rtMatch.timerMatch;
+      ti = rtMatch.timer;
+   }
+   else
+      ti=Timers.GetMatch(event, &timerMatch);
+   
+   switch (timerMatch) {
+      case tmFull:
+         if (iInfoSymbols && iVDRSymbols) 
+            t=ti->Recording()?Icons::Recording():Icons::Watch();    
+         else 
+            t=ti->Recording()?"R":"T";  
+         break;
+      case tmPartial:
+         if (iInfoSymbols && iVDRSymbols) 
+            t=ti->Recording()?Icons::Recording():Icons::WatchUpperHalf();    
+         else
+            t=ti->Recording()?"R":"t";
+         break;
+      default:
+         t=" ";
+         break;
+   }   
+      
+   if (iSwitchTimer && pEPGSearch && event) {
+      Epgsearch_switchtimer_v1_0* serviceData = new Epgsearch_switchtimer_v1_0;
+	  serviceData->event = event;
+	  serviceData->mode = 0;
+      if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
+         if(serviceData->success){
+            t=(iInfoSymbols && iVDRSymbols)?Icons::ArrowCCW():"S" ;
+		 }
+         delete serviceData;
+      }   
+   }   
+   if (event->Vps() && (event->Vps() - event->StartTime()))
+      v=(iInfoSymbols && iVDRSymbols)?Icons::VPS():"V";
+   else
+      v=" ";
+         
+   if (event->SeenWithin(30) && event->IsRunning())
+      r=(iInfoSymbols && iVDRSymbols)?Icons::Running():"*";
+   else
+      r=" " ;
+      
+   switch (EVENT_INFO_ALIGN){
+      case 2:
+         buffer[0] = cString::sprintf("%s", r);
+         buffer[1] = cString::sprintf("%s", v);
+         buffer[2] = cString::sprintf("%s", t);
+         break;
+      case 1:
+      default:
+         buffer[0] = cString::sprintf("%s", t);
+         buffer[1] = cString::sprintf("%s", v);
+         buffer[2] = cString::sprintf("%s", r);
+         break;
+   }
+   
+   int boxWidth = geom.w / 3;
+   for (int i = 0; i < 3; i++) {
+      boxes[i].Text(buffer[i]);
+      boxes[i].Font(EVENT_INFO_FONT);
+      boxes[i].FgColor(EVENT_INFO_COLOR);
+      boxes[i].BgColor(clrTransparent);
+      boxes[i].Flags((eTextFlags)(TBOX_VALIGN_CENTER | TBOX_HALIGN_CENTER));
+      boxes[i].X(geom.x + (i * boxWidth));
+      boxes[i].Y(geom.y);
+      boxes[i].W(boxWidth );
+      boxes[i].H(geom.h);
+      boxes[i].Generate();
+   }
+}
+
+void
+cYaepgEventInfo::Draw(cBitmap *bmp)
+{
+   YAEPG_INFO("Drawing event info at (%d %d)", geom.x, geom.y);
+   
+   for (int i = 0; i < 3; i++) {
+      boxes[i].Draw(bmp);
+   }
+}
+
+/*
+ *****************************************************************************
+ * cYaepgEventEpgImage
+ *****************************************************************************
+ */
+class cYaepgEventEpgImage {
+private:
+   tGeom geom;
+   const cEvent *event;
+   cBitmap *EpgImage;
+
+public:
+   cYaepgEventEpgImage(const cEvent *_event);
+   void UpdateEvent(const cEvent *_event) { event = _event; Generate(); }
+   void Generate(void);
+   void Draw(cBitmap *bmp);
+};
+
+cYaepgEventEpgImage::cYaepgEventEpgImage(const cEvent *_event) :
+   event(_event), EpgImage(NULL)
+{
+   geom = EVENT_EPGIMAGE_GEOM;
+   Generate();
+}
+
+void
+cYaepgEventEpgImage::Generate(void)
+{
+   Magick::Image image;
+  
+   char *strFilename = NULL;
+   
+   if (-1 == asprintf(&strFilename, "%s/%d.%s",sEpgImagesDir.c_str(),event->EventID(), imageExtensionTexts[iImageExtension]))
+   {
+	   YAEPG_ERROR("Couldn't built epg image filename!");
+	   delete strFilename;
+	   return;
+   }
+   
+   try {
+	  Geometry geo;
+      image.read(strFilename);
+      geo = image.size();
+      int w = geo.width();
+      int h = geo.height();
+      if (geom.h != h || geom.w != w) {
+         switch (iResizeImages) {
+         case 0:
+            image.sample(Geometry(geom.w, geom.h));
+            break;
+         case 1:
+            image.scale(Geometry(geom.w, geom.h));
+            break;
+         case 2:
+            image.zoom(Geometry(geom.w, geom.h));
+            break;
+         default:
+             YAEPG_ERROR("ERROR: unknown resize mode %d", iResizeImages);
+             break;
+         }
+         geo = image.size();
+         w = geo.width();
+         h = geo.height();
+      }
+      
+      image.opacity(OpaqueOpacity);
+      image.backgroundColor(Color(0, 0, 0, 0));
+      image.quantizeColorSpace(RGBColorspace);
+      image.quantizeColors(255);
+      image.quantize();
+     
+      EpgImage = new cBitmap(geom.w, geom.h, image.depth());
+      
+      // center image
+      int x = 0;
+      int y = 0;
+      x += ((geom.w - w) / 2);
+      y += ((geom.h - h) / 2);
+
+      const Magick::PixelPacket *pix = image.getConstPixels(0, 0, w, h);
+      for (int iy = 0; iy < h; ++iy) {
+        for (int ix = 0; ix < w; ++ix) {
+          tColor col = (~(int)(pix->opacity * 255 / MaxRGB) << 24)
+                     | ((int)(pix->red * 255 / MaxRGB) << 16)
+                     | ((int)(pix->green * 255 / MaxRGB) << 8)
+                     | (int)(pix->blue * 255 / MaxRGB);
+          EpgImage->DrawPixel(x + ix, y + iy, col);
+          ++pix;
+        }
+      }
+      delete strFilename;
+   } catch (Magick::Exception &e) {
+      YAEPG_ERROR("Couldn't load epg image %s, %s ", fullFilePath, e.what());
+      delete strFilename;
+      delete EpgImage;
+      EpgImage=NULL;
+   } catch (...) {
+      YAEPG_ERROR("Couldn't load %s: Unknown exception caught", fullFilePath);
+      delete strFilename;
+      delete EpgImage;
+      EpgImage=NULL;
+   }
+}
+
+void
+cYaepgEventEpgImage::Draw(cBitmap *bmp)
+{
+   YAEPG_INFO("Drawing event epg image at (%d %d)", geom.x, geom.y);
+   if (EpgImage)
+      bmp->DrawBitmap(geom.x, geom.y, *EpgImage);
 }
 
 /*
@@ -1700,10 +2072,10 @@ cYaepgEventDate::Generate(void)
    localtime_r(&t, &locTime);
    if (iTimeFormat == TIME_FORMAT_24H) {
       snprintf(timeStr, sizeof(timeStr), "%s %02d:%02d",
-               *WeekDayName((locTime.tm_wday + 6) % 6), locTime.tm_hour, locTime.tm_min);
+               *WeekDayName((locTime.tm_wday + 7) % 7), locTime.tm_hour, locTime.tm_min);
    } else {
       snprintf(timeStr, sizeof(timeStr), "%s %d:%02d%s",
-               *WeekDayName((locTime.tm_wday + 6) % 6),
+               *WeekDayName((locTime.tm_wday + 7) % 7),
                FMT_12HR(locTime.tm_hour), locTime.tm_min,
                FMT_AMPM(locTime.tm_hour));
    }
@@ -1803,17 +2175,8 @@ cYaepgTimeLine::Draw(cBitmap *bmp)
  */
 class cYaepgHelpBar {
 private:
-   struct {
-      int x1;
-      int x2;
-      int y1;
-      int y2;
-      tColor color;
-   } dots[4];
-   int dotDiam;
    cYaepgTextBox boxes[4];
    static const char *helpStrs[4];
-   static const tColor dotColors[4];
    tGeom geom;
 
 public:
@@ -1822,55 +2185,38 @@ public:
 };
 
 const char *cYaepgHelpBar::helpStrs[4] = {
-   trNOOP("Screenshot"),
+   trVDR("Button$Record"),
    trNOOP("Page up"),
    trNOOP("Page down"),
    trVDR("Button$Switch")
 };
 
-const tColor cYaepgHelpBar::dotColors[4] = {
-   (tColor)0xFFFF0000,
-   (tColor)0xFF00FF00,
-   (tColor)0xFFFFFF00,
-   (tColor)0xFF0000FF
-};
-
-cYaepgHelpBar::cYaepgHelpBar(void) :
-   dotDiam(10)
+cYaepgHelpBar::cYaepgHelpBar(void) 
 {
    geom = HELP_BAR_GEOM;
    int boxWidth = geom.w / 4;
    for (int i = 0; i < 4; i++) {
       boxes[i].Text(tr(helpStrs[i]));
-      boxes[i].Font(GRID_EVENT_FONT);
-      boxes[i].FgColor(GRID_EVENT_COLOR);
+      boxes[i].Font(HELP_BAR_FONT);
+      boxes[i].FgColor(HELP_BAR_COLOR);
       boxes[i].BgColor(clrTransparent);
-      boxes[i].Flags((eTextFlags)(TBOX_VALIGN_LEFT | TBOX_HALIGN_CENTER));
-      boxes[i].X(geom.x + (i * boxWidth) + dotDiam);
+      boxes[i].Flags((eTextFlags)(TBOX_VALIGN_CENTER | TBOX_HALIGN_CENTER));
+      boxes[i].X(geom.x + (i * boxWidth));
       boxes[i].Y(geom.y);
-      boxes[i].W(boxWidth - dotDiam);
+      boxes[i].W(boxWidth );
       boxes[i].H(geom.h);
       boxes[i].Generate();
-
-      dots[i].x1 = geom.x + (i * boxWidth);
-      dots[i].y1 = geom.y + ((geom.h - dotDiam) / 2);
-      dots[i].x2 = dots[i].x1 + dotDiam;
-      dots[i].y2 = dots[i].y1 + dotDiam;
-      dots[i].color = dotColors[i];
    }
 }
 
 void
 cYaepgHelpBar::Draw(cBitmap *bmp)
 {
-   if (geom.w < (4 * dotDiam)) {
+   if (geom.w < 40) {
       return;
    }
    
    for (int i = 0; i < 4; i++) {
-      bmp->DrawEllipse(dots[i].x1, dots[i].y1,
-                       dots[i].x2, dots[i].y2,
-                       dots[i].color);
       boxes[i].Draw(bmp);
    }
 }
@@ -1888,6 +2234,7 @@ public:
    cYaepgInputTime(void) : t(0) {}
    void UpdateTime(time_t _t);
    eOSState ProcessKey(eKeys key);
+   struct tm recTime;   
 };
 
 void
@@ -1898,6 +2245,7 @@ cYaepgInputTime::UpdateTime(time_t _t)
 
    t = _t;
    localtime_r(&t, &locTime);
+   recTime = locTime;
    if (iTimeFormat == TIME_FORMAT_24H) {
       snprintf(timeStr, sizeof(timeStr), "%02d:%02d",
                locTime.tm_hour, locTime.tm_min);
@@ -2000,18 +2348,14 @@ cYaepgInputStra::ProcessKey(eKeys key)
  */
 class cYaepgRecDlg {
 private:
-   static const char *freqStra[4];
-   char freqs[4][32];
    const cEvent *event;
    tGeom geom;
    cYaepgTextBox titleBox;
    cYaepgTextBox timeBox;
    cYaepgTextBox startBox;
    cYaepgTextBox endBox;
-   cYaepgTextBox freqBox;
    cYaepgInputTime startInput;
    cYaepgInputTime endInput;
-   cYaepgInputStra freqInput;
    int curY;
 
 public:
@@ -2019,13 +2363,7 @@ public:
    void UpdateEvent(const cEvent *_event);
    eOSState ProcessKey(eKeys key);
    void Draw(cBitmap *bmp);
-};
-
-const char *cYaepgRecDlg::freqStra[4] = {
-   trNOOP("Once"),
-   trNOOP("Every day"),
-   trNOOP("Mon-Fri"),
-   trNOOP("Sun-Sat"),
+   bool AddTimer(void);
 };
 
 cYaepgRecDlg::cYaepgRecDlg(void) :
@@ -2042,7 +2380,7 @@ cYaepgRecDlg::cYaepgRecDlg(void) :
    titleBox.Font(REC_DLG_FONT);
    titleBox.FgColor(REC_DLG_COLOR);
    titleBox.BgColor(clrTransparent);
-   titleBox.Flags((eTextFlags)(TBOX_VALIGN_LEFT | TBOX_HALIGN_CENTER));
+   titleBox.Flags((eTextFlags)(TBOX_VALIGN_CENTER | TBOX_HALIGN_CENTER));
    titleBox.X(REC_DLG_GEOM.x + REC_TITLE_GEOM.x);
    titleBox.Y(REC_DLG_GEOM.y + REC_TITLE_GEOM.y);
    titleBox.W(REC_TITLE_GEOM.w);
@@ -2078,16 +2416,6 @@ cYaepgRecDlg::cYaepgRecDlg(void) :
    endBox.W(REC_END_GEOM.w);
    endBox.H(REC_END_GEOM.h);
 
-   freqBox.Text(tr("Frequency"));
-   freqBox.Font(REC_DLG_FONT);
-   freqBox.FgColor(REC_DLG_COLOR);
-   freqBox.BgColor(clrTransparent);
-   freqBox.Flags((eTextFlags)(TBOX_VALIGN_LEFT | TBOX_HALIGN_CENTER));
-   freqBox.X(REC_DLG_GEOM.x + REC_FREQ_GEOM.x);
-   freqBox.Y(REC_DLG_GEOM.y + REC_FREQ_GEOM.y);
-   freqBox.W(REC_FREQ_GEOM.w);
-   freqBox.H(REC_FREQ_GEOM.h);
-
    startInput.Text("");
    startInput.Font(REC_DLG_FONT);
    startInput.FgColor(REC_DLG_COLOR);
@@ -2108,20 +2436,52 @@ cYaepgRecDlg::cYaepgRecDlg(void) :
    endInput.W(REC_ENINP_GEOM.w);
    endInput.H(REC_ENINP_GEOM.h);
 
-   freqInput.Text("");
-   freqInput.Font(REC_DLG_FONT);
-   freqInput.FgColor(REC_DLG_COLOR);
-   freqInput.BgColor(clrTransparent);
-   freqInput.Flags((eTextFlags)(TBOX_VALIGN_RIGHT | TBOX_HALIGN_CENTER));
-   freqInput.X(REC_DLG_GEOM.x + REC_FRINP_GEOM.x);
-   freqInput.Y(REC_DLG_GEOM.y + REC_FRINP_GEOM.y);
-   freqInput.W(REC_FRINP_GEOM.w);
-   freqInput.H(REC_FRINP_GEOM.h);
-
-   for (int i = 0; i < 4; i++) {
-      strncpy(freqs[i], tr(freqStra[i]), sizeof(freqs[i]));
-   }
 }
+
+bool
+cYaepgRecDlg::AddTimer(void)
+{
+    cTimer *recTimer;
+    char dayStr[8], file[MaxFileName], eventStr[256];
+    int flags, channel, start, stop, priority, lifetime;
+
+    /* Create the timer */
+    recTimer = new cTimer;
+
+    /* Construct the string that represent the event */
+    flags = tfActive;
+    channel = Channels.GetByChannelID(event->ChannelID(), true)->Number();
+    snprintf(dayStr, 8, "%d", startInput.recTime.tm_mday);
+    start = (startInput.recTime.tm_hour * 100) + startInput.recTime.tm_min;
+    stop = (endInput.recTime.tm_hour * 100) + endInput.recTime.tm_min;
+    priority = Setup.DefaultPriority;
+    lifetime = Setup.DefaultLifetime; 
+    *file = '\0';
+    if (!isempty(event->Title())) {
+         strncpy(file, event->Title(), sizeof(file));
+    }
+    snprintf(eventStr, 256, "%d:%d:%s:%04d:%04d:%d:%d:%s:",
+             flags, channel, dayStr, start, stop,
+	     priority, lifetime, file);
+    if (recTimer->Parse(eventStr) == false) {
+      delete recTimer;
+      return false;
+    }
+    if (iRemoteTimer && pRemoteTimers) {
+       RemoteTimers_Timer_v1_0 rt;
+       rt.timer = recTimer;
+       if (!pRemoteTimers->Service("RemoteTimers::NewTimer-v1.0", &rt)) {
+          YAEPG_ERROR(*rt.errorMsg);
+          return false;
+       }
+    }
+    else {
+      Timers.Add(recTimer);
+      Timers.Save();
+    }    
+    return true;
+}
+
 
 eOSState
 cYaepgRecDlg::ProcessKey(eKeys key)
@@ -2136,9 +2496,6 @@ cYaepgRecDlg::ProcessKey(eKeys key)
    case 1:
       state = endInput.ProcessKey(key);
       break;
-   case 2:
-      state = freqInput.ProcessKey(key);
-      break;
    default:
       ASSERT(0);
       break;
@@ -2148,8 +2505,16 @@ cYaepgRecDlg::ProcessKey(eKeys key)
    if (state == osUnknown) {
       switch (key & ~k_Repeat) {
       case kUp:
+         if (curY > 0) {
+           curY--;
+           state = osContinue;
+       	 }
          break;
-      case kRight:
+      case kDown:
+         if (curY < 1) {
+           curY++;
+           state = osContinue;
+      	 }
          break;
       default:
          state = osUnknown;
@@ -2168,6 +2533,9 @@ cYaepgRecDlg::UpdateEvent(const cEvent *_event)
    /* Update the event title */
    titleBox.Text(event->Title());
    titleBox.Generate();
+   
+   startBox.Generate();
+   endBox.Generate();
 
    /* Update the start/end time */
    struct tm locStart, locEnd;
@@ -2196,13 +2564,6 @@ cYaepgRecDlg::UpdateEvent(const cEvent *_event)
    startInput.UpdateTime(event->StartTime() - (Setup.MarginStart * 60));
    endInput.UpdateTime(event->StartTime() + _event->Duration() + (Setup.MarginStart * 60));
 
-   /* Update the frequency string array */
-   struct tm locTime;
-   t = event->StartTime();
-   localtime_r(&t, &locTime);
-   freqs[1][5] = ' ';
-   strcpy(&freqs[1][6], *WeekDayName((locTime.tm_wday + 6) % 6));
-   freqInput.UpdateStra((char **)freqs);
 }
 
 void
@@ -2213,11 +2574,20 @@ cYaepgRecDlg::Draw(cBitmap *bmp)
    timeBox.Draw(bmp);
    startBox.Draw(bmp);
    endBox.Draw(bmp);
-   freqBox.Draw(bmp);
+   
+   switch (curY) {
+   case 0:
+      endInput.BgColor(clrTransparent);
+      startInput.BgColor(GRID_SEL_BG);
+      break;
+   case 1:
+      startInput.BgColor(clrTransparent);
+      endInput.BgColor(GRID_SEL_BG);
+      break;
+   }
 
    startInput.Draw(bmp);
    endInput.Draw(bmp);
-   freqInput.Draw(bmp);
 }
 
 /*
@@ -2232,7 +2602,7 @@ private:
 
 public:
    cYaepgMsg(void);
-   void UpdateMsg(char *msg);
+   void UpdateMsg(const char *msg);
    void Draw(cBitmap *bmp);
 };
 
@@ -2251,7 +2621,7 @@ cYaepgMsg::cYaepgMsg(void)
 }
 
 void
-cYaepgMsg::UpdateMsg(char *msg)
+cYaepgMsg::UpdateMsg(const char *msg)
 {
    msgBox.Text(msg);
    msgBox.Generate();
@@ -2476,7 +2846,6 @@ private:
    time_t startTime;
    tArea mainWin;
    cBitmap *mainBmp;
-
    std::vector< cChannel * > chanVec;
    const cEvent *event;
    cTimeMs lastInput;
@@ -2488,11 +2857,16 @@ private:
    cYaepgGridTime *gridTime;
    cYaepgGridDate *gridDate;
    cYaepgEventTitle *eventTitle;
+   cYaepgEventInfo *eventInfo;
    cYaepgEventTime *eventTime;
    cYaepgEventDesc *eventDesc;
    cYaepgEventDate *eventDate;
+   cYaepgEventEpgImage *eventEpgImage;
    cYaepgTimeLine *timeLine;
    cYaepgHelpBar *helpBar;
+   cYaepgRecDlg *recordDlg;
+   cYaepgMsg *messageBox;
+   uint64_t msgBoxStart;
 
 public:
    cYaepghd(void);
@@ -2506,6 +2880,9 @@ public:
    void UpdateEvent(const cEvent *newEvent);
    void MoveCursor(eCursorDir dir);
    void SwitchToCurrentChannel(bool closeVidWin = false);
+   void AddDelTimer(void);
+   void AddDelSwitchTimer(void);
+   void AddDelRemoteTimer(void);
    void Draw(void);
 };
 
@@ -2523,11 +2900,15 @@ cYaepghd::cYaepghd(void) :
    gridTime(NULL),
    gridDate(NULL),
    eventTitle(NULL),
+   eventInfo(NULL),
    eventTime(NULL),
    eventDesc(NULL),
    eventDate(NULL),
+   eventEpgImage(NULL),
    timeLine(NULL),
-   helpBar(NULL)
+   helpBar(NULL),
+   recordDlg(NULL),
+   messageBox(NULL)
 {
    memset(&mainWin, 0, sizeof(mainWin));
    chanVec.clear();
@@ -2543,10 +2924,15 @@ cYaepghd::~cYaepghd()
    delete gridDate;
    delete timeLine;
    delete eventTitle;
+   delete eventInfo;
    delete eventTime;
    delete eventDesc;
    delete eventDate;
+   if (eventEpgImage)
+      delete eventEpgImage;
    delete helpBar;
+   delete recordDlg;
+   delete messageBox;
 #ifdef YAEPGHD_REEL_EHD
    reelVidWin->Close();
 #endif
@@ -2581,6 +2967,7 @@ cYaepghd::Show(void)
                          BG_IMAGE->Bpp());
    osd->SetAreas(&mainWin, 1);
 
+#ifdef YAEPGHDVERSNUM
    /* Set up the video window parameters */
    if (VID_WIN_GEOM.w != 0 && VID_WIN_GEOM.h != 0) {
       osd->vidWin.x1 = VID_WIN_GEOM.x;
@@ -2589,6 +2976,7 @@ cYaepghd::Show(void)
       osd->vidWin.y2 = VID_WIN_GEOM.y + VID_WIN_GEOM.h;
       osd->vidWin.bpp = 12;
    }
+#endif
 
 #ifdef YAEPGHD_REEL_EHD
    reelVidWin->Open(VID_WIN_GEOM);
@@ -2605,20 +2993,218 @@ cYaepghd::Show(void)
    timeLine = new cYaepgTimeLine(t);
    const cEvent *e = gridEvents->Event();
    eventTitle = new cYaepgEventTitle(e);
+   eventInfo = new cYaepgEventInfo(e);
    eventTime = new cYaepgEventTime(e);
    eventDesc = new cYaepgEventDesc(e);
    eventDate = new cYaepgEventDate();
+   if (iEpgImages)
+      eventEpgImage = new cYaepgEventEpgImage(e);
    helpBar = new cYaepgHelpBar();
+   recordDlg = NULL;
+   messageBox = NULL;
+   
+   if (iRemoteTimer && pRemoteTimers) {
+      cString errorMsg;
+      if (!pRemoteTimers->Service("RemoteTimers::RefreshTimers-v1.0", &errorMsg)) {
+         messageBox = new cYaepgMsg();
+         messageBox->UpdateMsg((char*)*errorMsg);
+         msgBoxStart = cTimeMs::Now();
+      }
+   }
 
-   Draw();
+   Draw(); 
 }
+
+void
+cYaepghd::AddDelTimer(void)
+ {
+      const cEvent *event=gridEvents->Event();
+	  int timerMatch;
+	  cTimer *ti;
+	  ti=Timers.GetMatch(event, &timerMatch);
+	  if (timerMatch==tmFull)
+	  {
+         if (ti) 
+		 {
+            ti->OnOff();
+		 }   
+      }
+	  else
+	  {
+         cTimer *timer = new cTimer(event);
+         cTimer *t = Timers.GetTimer(timer);
+         if (t) {
+            t->OnOff();
+            delete timer;
+         }
+         else {
+            Timers.Add(timer);
+	     }
+      }
+      Timers.SetModified();
+      eventInfo->UpdateEvent(event);     
+ }
+
+void 
+cYaepghd::AddDelSwitchTimer()
+{
+	const cEvent *event = gridEvents->Event();
+	bool SwitchTimerExits = false;
+    if (pEPGSearch && event) {
+	   Epgsearch_switchtimer_v1_0* serviceData = new Epgsearch_switchtimer_v1_0;
+	   serviceData->event = event;
+	   serviceData->mode = 0;
+       if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
+          SwitchTimerExits=serviceData->success;
+          delete serviceData;
+       } 
+       else {
+          delete serviceData;
+	      YAEPG_ERROR("Epgsearch-switchtimer-v1.0: EPGSearch does not support this service!");
+	      return;
+	   }   
+       if (!SwitchTimerExits) {
+          serviceData = new Epgsearch_switchtimer_v1_0;
+	      serviceData->event = event;
+	      serviceData->mode = 1;
+	      serviceData->switchMinsBefore = iSwitchMinsBefore;	 
+	      serviceData->announceOnly = false;
+          if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
+             if (serviceData->success) {
+  	 	        messageBox = new cYaepgMsg();
+        	    const char *msgtext;
+	            msgtext = tr("Switch timer added");
+	            messageBox->UpdateMsg(msgtext);
+	            msgBoxStart = cTimeMs::Now();
+         	    needsRedraw = true; 
+    	        delete serviceData;
+    	     }   
+    	  }   
+    	  else {
+		     delete serviceData;
+	         YAEPG_ERROR("Epgsearch-switchtimer-v1.0: EPGSearch does not support this service!");
+	         return;
+	      }   
+    	}
+        else {
+       	   serviceData = new Epgsearch_switchtimer_v1_0;
+	       serviceData->event = event;
+	       serviceData->mode = 2;
+           if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
+              if (serviceData->success) {
+				 messageBox = new cYaepgMsg();
+                 const char *msgtext;
+	             msgtext = tr("Switch timer deleted");
+	             messageBox->UpdateMsg(msgtext);
+	             msgBoxStart = cTimeMs::Now();
+         	     needsRedraw = true; 
+    	         delete serviceData;
+    	      }   
+		   }
+    	   else {
+		      delete serviceData;
+	          YAEPG_ERROR("Epgsearch-switchtimer-v1.0: EPGSearch does not support this service!");
+	          return;
+	       }    
+	    }   
+    }
+    else { 
+	   YAEPG_ERROR("EPGSearch does not exist!");
+    }
+}
+
+void 
+cYaepghd::AddDelRemoteTimer()
+{
+   const cEvent *event=gridEvents->Event();
+   if (pRemoteTimers) {
+      RemoteTimers_GetMatch_v1_0 rtMatch;
+      rtMatch.event = event;
+      pRemoteTimers->Service("RemoteTimers::GetMatch-v1.0", &rtMatch);
+      if (rtMatch.timerMatch == tmFull) {
+         if (rtMatch.timer) {
+            rtMatch.timer->OnOff();
+            RemoteTimers_Timer_v1_0 rt;
+            rt.timer = rtMatch.timer;
+            if (!pRemoteTimers->Service("RemoteTimers::ModTimer-v1.0", &rt)) {
+               messageBox = new cYaepgMsg();
+               messageBox->UpdateMsg((char*)*rt.errorMsg);
+               msgBoxStart = cTimeMs::Now();
+               needsRedraw = true;
+            }
+         }
+      }
+      else {
+         cTimer *timer = new cTimer(event);
+         RemoteTimers_Timer_v1_0 rt;
+         rt.timer = timer;
+         pRemoteTimers->Service("RemoteTimers::GetTimer-v1.0", &rt.timer);
+         if (rt.timer) {
+            rt.timer->OnOff();
+            if (!pRemoteTimers->Service("RemoteTimers::ModTimer-v1.0", &rt)) {
+               messageBox = new cYaepgMsg();
+               messageBox->UpdateMsg((char*)*rt.errorMsg);
+               msgBoxStart = cTimeMs::Now();
+               needsRedraw = true;
+            }
+            delete timer;
+         }
+         else {
+            rt.timer = timer;
+            if (!pRemoteTimers->Service("RemoteTimers::NewTimer-v1.0", &rt)) {
+               messageBox = new cYaepgMsg();
+               messageBox->UpdateMsg((char*)*rt.errorMsg);
+               msgBoxStart = cTimeMs::Now();
+               needsRedraw = true;
+            }
+         }
+      }
+      eventInfo->UpdateEvent(event);
+   }
+}
+
 
 eOSState
 cYaepghd::ProcessKey(eKeys key)
 {
    eOSState state = cOsdObject::ProcessKey(key);
-
+     
    needsRedraw = false;
+   
+   if (recordDlg != NULL && state == osUnknown) {
+	  state=recordDlg->ProcessKey(key);
+	  if (state == osContinue) {
+	       needsRedraw = true;
+      }
+      switch (key & ~k_Repeat) {
+      case kOk:
+      {
+         const char *msgtext;
+         msgtext = recordDlg->AddTimer() ? tr("Timer added") : tr("Failed to add timer");
+         delete recordDlg;
+	     recordDlg = NULL;
+	     messageBox = new cYaepgMsg();
+	     messageBox->UpdateMsg(msgtext);
+	     msgBoxStart = cTimeMs::Now();
+	     eventInfo->UpdateEvent(event);     
+	     needsRedraw = true;
+         state = osContinue;
+	     break;
+	  } 
+      case kBack:
+      {
+         delete recordDlg;
+	     recordDlg = NULL;
+	     needsRedraw = true;
+         state = osContinue;
+	     break;
+	  }   
+      default:
+         state = osContinue;
+	     break;
+       }
+   }
+   
    if (state == osUnknown) {
       switch (key & ~k_Repeat) {
       case kBack:
@@ -2651,14 +3237,106 @@ cYaepghd::ProcessKey(eKeys key)
          state = osContinue;
          break;
       case kOk:
-         SwitchToCurrentChannel(true);
-         if (iChannelChange == CHANNEL_CHANGE_SEMIAUTOMATIC)
+         if (iSwitchOK){
+            SwitchToCurrentChannel(true);
+            if (iChannelChange == CHANNEL_CHANGE_OPEN)
+               state = osContinue;
+            else
+               state = osEnd;
+		 }
+         else{
+		    int timerMatch;
+			Timers.GetMatch(event, &timerMatch);
+		    if (!(timerMatch==tmFull)){
+				
+	           if (iRemoteTimer && pRemoteTimers) {
+                  RemoteTimers_Event_v1_0 rtEvent;
+                  rtEvent.event = event;
+                  pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
+                  if (!(rtEvent.timer)){
+                     recordDlg = new cYaepgRecDlg();
+	                 recordDlg->UpdateEvent(gridEvents->Event());
+		          }
+		          else{
+		             AddDelRemoteTimer();  // delete remote timer
+		             pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
+                     if (!(rtEvent.timer)) {
+			            messageBox = new cYaepgMsg();
+                        messageBox->UpdateMsg(tr("Remote timer deactivated"));
+                        msgBoxStart = cTimeMs::Now();
+                        needsRedraw = true;
+			         }
+			      }
+  	           }       
+  	           else {
+                  recordDlg = new cYaepgRecDlg();
+	              recordDlg->UpdateEvent(gridEvents->Event());				   
+  	           }
+		    }
+ 	        else {
+			   AddDelTimer();  // delete timer
+			   int timerMatch;
+			   Timers.GetMatch(event, &timerMatch);
+               if (timerMatch==tmNone){	
+			      messageBox = new cYaepgMsg();
+                  messageBox->UpdateMsg(tr("Timer deactivated"));
+                  msgBoxStart = cTimeMs::Now();
+                  needsRedraw = true;
+			   }
+            }
+            needsRedraw = true;	           
             state = osContinue;
-         else
-            state = osEnd;
-         break;
+         }  
+		 break;
       case kRed:
-         cDevice::PrimaryDevice()->GrabImageFile("yaepghd.jpg", true, 256, -1, -1);
+         if (event && event->EventID()!=0){
+            if (iRecDlgRed) {
+               int timerMatch;
+			   Timers.GetMatch(event, &timerMatch);
+               if (!(timerMatch==tmFull)){				
+	              if (iRemoteTimer && pRemoteTimers) {
+                     RemoteTimers_Event_v1_0 rtEvent;
+                     rtEvent.event = event;
+                     pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
+                     if (!(rtEvent.timer)){
+                        recordDlg = new cYaepgRecDlg();
+	                    recordDlg->UpdateEvent(gridEvents->Event());
+		             }
+		             else{
+		                AddDelRemoteTimer();  // delete remote timer
+		                pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
+                        if (!(rtEvent.timer)) {
+			               messageBox = new cYaepgMsg();
+                           messageBox->UpdateMsg(tr("Remote timer deactivated"));
+                           msgBoxStart = cTimeMs::Now();
+                           needsRedraw = true;
+			            }
+			         }
+  	              }       
+  	              else {
+                     recordDlg = new cYaepgRecDlg();
+	                 recordDlg->UpdateEvent(gridEvents->Event());				   
+  	              }
+		       }
+ 	           else {
+			      AddDelTimer();  // delete timer
+			      int timerMatch;
+			      Timers.GetMatch(event, &timerMatch);
+                  if (timerMatch==tmNone){	
+			         messageBox = new cYaepgMsg();
+                     messageBox->UpdateMsg(tr("Timer deactivated"));
+                     msgBoxStart = cTimeMs::Now();
+			      }
+               }
+            }  
+            else { 
+               if (iRemoteTimer && pRemoteTimers)
+			      AddDelRemoteTimer(); 
+			   else
+	              AddDelTimer(); 
+		    }
+		    needsRedraw = true;
+		 }   
          state = osContinue;
          break;
       case kGreen:
@@ -2672,16 +3350,41 @@ cYaepghd::ProcessKey(eKeys key)
          state = osContinue;
          break;
       case kBlue:
-         SwitchToCurrentChannel();
-         state = osContinue;
-         break;
+         if (iSwitchTimer && pEPGSearch){
+            if (event && (event->EventID() != 0)){
+               if (event->IsRunning(true)){
+	              SwitchToCurrentChannel(true);
+                  if (iChannelChange == CHANNEL_CHANGE_OPEN)
+                     state = osContinue;
+                  else
+                     state = osEnd;
+	           } 
+	           else if (iSwitchTimer){ 
+	              AddDelSwitchTimer(); 
+	              needsRedraw = true;
+	              state = osContinue;
+	           }
+		    }
+		 }
+		 else {
+         SwitchToCurrentChannel(true);
+            if (iChannelChange == CHANNEL_CHANGE_OPEN )
+              state = osContinue;
+            else
+               state = osEnd;
+		 }
+  	     break;
       case kFastFwd:
+         // +24 hours
+         UpdateTime(+86400); 
+         needsRedraw = true;
          state = osContinue;
-         // +12 hours
-         break;
+	     break;
       case kFastRew:
+         // -24 hours
+         UpdateTime(-86400);
+	     needsRedraw = true;
          state = osContinue;
-         // -12 hours
          break;
       case k0 ... k9:
          if (directChan || (key != k0)) {
@@ -2734,6 +3437,12 @@ cYaepghd::ProcessKey(eKeys key)
          SetTime(now);
       }
    }
+   
+   if (messageBox != NULL && (cTimeMs::Now() - msgBoxStart) > 1000) {
+       delete messageBox;
+       messageBox = NULL;
+       needsRedraw = true;
+   }    
 
    /* Redraw the screen if needed */
    if (needsRedraw) {
@@ -2852,8 +3561,11 @@ cYaepghd::UpdateEvent(const cEvent *newEvent)
    }
    event = newEvent;
    eventTitle->UpdateEvent(event);
+   eventInfo->UpdateEvent(event);
    eventTime->UpdateEvent(event);
    eventDesc->UpdateEvent(event);
+   if (iEpgImages)
+      eventEpgImage->UpdateEvent(event);
 }
 
 void
@@ -2862,14 +3574,6 @@ cYaepghd::SwitchToCurrentChannel(bool closeVidWin)
    const cChannel *gridChan = chanVec[gridEvents->Row()];
 
    if (gridChan && (gridChan->Number() != cDevice::CurrentChannel())) {
-      /*
-       * The "Channel not availaible message" will cause vdr to crash. Do a
-       * "lower level" channel switch to avoid the error message.
-       *
-       * XXX Is this still true ? XXX
-       */
-      eSetChannelResult ret;
-
       /*
        * The eHD card doesn't seem to like changing channels while the video
        * plane is sacled down.  To get around this problem we close/reopen the
@@ -2880,10 +3584,7 @@ cYaepghd::SwitchToCurrentChannel(bool closeVidWin)
       cCondWait::SleepMs(100);
 #endif
 
-      ret = cDevice::PrimaryDevice()->SetChannel(gridChan, true);
-      if (ret != scrOk) {
-         fprintf(stderr, "SetChannel(): %d\n", ret);
-      }
+      Channels.SwitchTo(gridChan->Number());
 
 #ifdef YAEPGHD_REEL_EHD
       if (closeVidWin == false) {
@@ -2933,11 +3634,20 @@ cYaepghd::Draw(void)
    gridDate->Draw(mainBmp);
    timeLine->Draw(mainBmp);
    eventTitle->Draw(mainBmp);
+   eventInfo->Draw(mainBmp);
    eventTime->Draw(mainBmp);
    eventDesc->Draw(mainBmp);
    eventDate->Draw(mainBmp);
+   if (iEpgImages)
+      eventEpgImage->Draw(mainBmp);
    helpBar->Draw(mainBmp);
-
+   if (recordDlg != NULL) {
+       recordDlg->Draw(mainBmp);
+   }
+   if (messageBox != NULL) {
+       messageBox->Draw(mainBmp);
+   }  
+   
    osd->DrawBitmap(0, 0, *mainBmp);
    osd->Flush();
 }
@@ -2950,16 +3660,32 @@ cYaepghd::Draw(void)
 class cMenuSetupYaepg : public cMenuSetupPage {
 private:
    int iNewHideMenuEntry;
+   char sNewMainMenuEntry[MaxFileName];
+#if defined(MAINMENUHOOKSVERSION) 
+#if MAINMENUHOOKSVERSNUM >= 10001
    int iNewReplaceOrgSchedule;
+#endif
+#endif
    int iNewChannelChange;
+   int iNewSwitchOK;
+   int iNewRecDlgRed;
    int iNewTimeFormat;
    int iNewChannelOrder;
+   int iNewChannelNumber;
+   int iNewInfoSymbols;
+   int iNewSwitchTimer;
+   int iNewSwitchMinsBefore;
+   int iNewRemoteTimer;
+   int iNewEpgImages;
+   int iNewResizeImages;
+   int iNewImageExtension;
    int iNewThemeIndex;
    char **themes;
    int numThemes;
    const char *TIME_FORMATS[TIME_FORMAT_COUNT];
    const char *CH_ORDER_FORMATS[CHANNEL_ORDER_COUNT];
    const char *CH_CHANGE_MODES[CHANNEL_CHANGE_COUNT];
+   const char *resizeImagesTexts[3];
    
 protected:
    virtual void Store(void);
@@ -2973,17 +3699,53 @@ public:
 void cMenuSetupYaepg::Store(void)
 {
    iHideMenuEntry      = iNewHideMenuEntry;
+ #if defined(MAINMENUHOOKSVERSION) 
+ #if MAINMENUHOOKSVERSNUM >= 10001
    iReplaceOrgSchedule = iNewReplaceOrgSchedule;
+ #endif
+ #endif
    iChannelChange      = iNewChannelChange;
+   iSwitchOK           = iNewSwitchOK;  
+   iRecDlgRed          = iNewRecDlgRed;
    iTimeFormat         = iNewTimeFormat;
    iChannelOrder       = iNewChannelOrder;
+   iChannelNumber      = iNewChannelNumber;
+   iInfoSymbols        = iNewInfoSymbols;
+   iSwitchTimer        = iNewSwitchTimer;
+   iRemoteTimer        = iNewRemoteTimer;
+   iEpgImages          = iNewEpgImages;
+   iResizeImages       = iNewResizeImages;
+   iImageExtension  = iNewImageExtension;
+   iSwitchMinsBefore = iNewSwitchMinsBefore;
    sThemeName          = themes[iNewThemeIndex];
+   
+   if (strcmp(sMainMenuEntry, tr("YaepgHD")) == 0) {
+      strcpy(sMainMenuEntry,"");
+   }
+   else{
+      strcpy(sMainMenuEntry,sNewMainMenuEntry);
+   }
 
    SetupStore("HideMenuEntry",      iHideMenuEntry);
+   SetupStore("MainMenuEntry",      sMainMenuEntry);
+ #if defined(MAINMENUHOOKSVERSION) 
+ #if MAINMENUHOOKSVERSNUM >= 10001
    SetupStore("ReplaceOrgSchedule", iReplaceOrgSchedule);
+ #endif
+ #endif
    SetupStore("ChannelChange",      iChannelChange);
+   SetupStore("SwitchOk",           iSwitchOK);
+   SetupStore("RecDlgRed",           iRecDlgRed);
    SetupStore("TimeFormat",         iTimeFormat);
    SetupStore("ChannelOrder",       iChannelOrder);
+   SetupStore("ChannelNumber",      iChannelNumber);
+   SetupStore("InfoSymbols",        iInfoSymbols);
+   SetupStore("SwitchTimer",        iSwitchTimer);
+   SetupStore("SwitchMinsBefore",   iSwitchMinsBefore);
+   SetupStore("RemoteTimer",        iRemoteTimer);
+   SetupStore("EpgImages",          iEpgImages);
+   SetupStore("ResizeImages",       iResizeImages);
+   SetupStore("ImageExtension",     iImageExtension);
    SetupStore("Theme",              sThemeName.c_str());
 }
 
@@ -2995,9 +3757,13 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    CH_ORDER_FORMATS[CHANNEL_ORDER_UP]   = tr("Up");
    CH_ORDER_FORMATS[CHANNEL_ORDER_DOWN] = tr("Down");
 
-   CH_CHANGE_MODES[CHANNEL_CHANGE_MANUAL]        = tr("Manual");
-   CH_CHANGE_MODES[CHANNEL_CHANGE_SEMIAUTOMATIC] = tr("Semi-automatic");
+   CH_CHANGE_MODES[CHANNEL_CHANGE_CLOSE]        = tr("Close YaepgHD");
+   CH_CHANGE_MODES[CHANNEL_CHANGE_OPEN] = tr("Leave YaepgHD open");
    CH_CHANGE_MODES[CHANNEL_CHANGE_AUTOMATIC]     = tr("Automatic");
+   
+   resizeImagesTexts[0] = tr("pixel algo");
+   resizeImagesTexts[1] = tr("ratio algo");
+   resizeImagesTexts[2] = tr("zoom image");
 
    cYaepgTheme::Themes(&themes, &numThemes);
    iNewThemeIndex = 0;
@@ -3010,19 +3776,73 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    } else {
       iNewThemeIndex = 0;
    }
+   
+   strcpy(sNewMainMenuEntry,sMainMenuEntry);
+  if (isempty(sNewMainMenuEntry)){
+     strcpy(sNewMainMenuEntry,tr("YaepgHD"));
+  }   
+
 
    iNewHideMenuEntry = iHideMenuEntry;
-   iNewChannelChange = iChannelChange;
-   iNewTimeFormat    = iTimeFormat;
-   iNewChannelOrder  = iChannelOrder;
+   #if defined(MAINMENUHOOKSVERSION) 
+   #if MAINMENUHOOKSVERSNUM >= 10001
    iNewReplaceOrgSchedule = iReplaceOrgSchedule;
+   #endif
+   #endif
+   iNewChannelChange   = iChannelChange;
+   iNewSwitchOK        = iSwitchOK; 
+   iNewRecDlgRed       = iRecDlgRed;
+   iNewTimeFormat      = iTimeFormat;
+   iNewChannelOrder    = iChannelOrder;
+   iNewChannelNumber   = iChannelNumber;
+   iNewInfoSymbols     = iInfoSymbols;
+   iNewSwitchTimer     = iSwitchTimer;
+   iNewRemoteTimer     = iRemoteTimer;
+   iNewEpgImages       = iEpgImages;
+   iNewResizeImages    = iResizeImages;
+   iNewImageExtension  = iImageExtension;
+   iNewSwitchMinsBefore= iSwitchMinsBefore;
 
    Add(new cMenuEditBoolItem (tr("Hide mainmenu entry"), &iNewHideMenuEntry));
+   Add(new cMenuEditStrItem(tr("Main menu entry"), sNewMainMenuEntry, sizeof(sNewMainMenuEntry),trVDR(FileNameChars)));
+   #if defined(MAINMENUHOOKSVERSION) 
+   #if MAINMENUHOOKSVERSNUM >= 10001
    Add(new cMenuEditBoolItem (tr("Replace original schedule"), &iNewReplaceOrgSchedule));
+   #endif
+   #endif
    Add(new cMenuEditStraItem (tr("Channel change"), &iNewChannelChange, CHANNEL_CHANGE_COUNT, CH_CHANGE_MODES));
+   Add(new cMenuEditBoolItem (tr("Switch channel with OK"), &iNewSwitchOK));
+   Add(new cMenuEditBoolItem (tr("Record dialog with red button"), &iNewRecDlgRed));
    Add(new cMenuEditStraItem (tr("Time format"), &iNewTimeFormat, TIME_FORMAT_COUNT, TIME_FORMATS));
    Add(new cMenuEditStraItem (tr("Channel order"), &iNewChannelOrder, CHANNEL_ORDER_COUNT, CH_ORDER_FORMATS));
-   Add(new cMenuEditStraItem (trVDR("Setup.OSD$Theme"), &iNewThemeIndex, numThemes, themes));
+   Add(new cMenuEditBoolItem (tr("Channel number"), &iNewChannelNumber));
+
+   if (iVDRSymbols){
+      Add(new cMenuEditBoolItem (tr("Info symbols"), &iNewInfoSymbols));
+   }
+   Add(new cMenuEditBoolItem (tr("EPG images"), &iNewEpgImages));
+   Add(new cMenuEditStraItem(tr("  Resize images"), &iNewResizeImages, 3, resizeImagesTexts));
+   Add(new cMenuEditStraItem(tr("  Image format"), &iNewImageExtension, 3, imageExtensionTexts));
+   
+   if (pEPGSearch) {
+      Add(new cMenuEditBoolItem (tr("Switch timer"), &iNewSwitchTimer)); 
+      Add(new cMenuEditIntItem( tr("  Switch ... minutes before start"), &iNewSwitchMinsBefore));
+   }
+   else {
+      YAEPG_INFO("EPGSearch not found (Switch Timer disabled)!");
+   }
+   if (pRemoteTimers) {
+      Add(new cMenuEditBoolItem (tr("Remote timer"), &iNewRemoteTimer)); 
+   }
+   else {
+      YAEPG_INFO("RemoteTimers not found (Remote Timer disabled)!");
+   }
+   
+   
+   
+   if (numThemes > 0) {
+      Add(new cMenuEditStraItem (trVDR("Setup.OSD$Theme"), &iNewThemeIndex, numThemes, themes));
+   }
 }
 
 cMenuSetupYaepg::~cMenuSetupYaepg()
@@ -3040,9 +3860,8 @@ cMenuSetupYaepg::~cMenuSetupYaepg()
  * cPluginYaepghd
  *****************************************************************************
  */
-static const char *VERSION        = "0.0.1";
+static const char *VERSION        = "0.0.3-ce";
 static const char *DESCRIPTION    = trNOOP("Yet another EPG in HD");
-static const char *MAINMENUENTRY  = trNOOP("YaepgHD");
 
 class cPluginYaepghd : public cPlugin {
 public:
@@ -3059,7 +3878,7 @@ public:
    virtual void MainThreadHook(void);
    virtual cString Active(void);
    virtual time_t WakeupTime(void);
-   virtual const char *MainMenuEntry(void) { return tr(MAINMENUENTRY); }
+   virtual const char *MainMenuEntry(void);
    virtual cOsdObject *MainMenuAction(void);
    virtual cMenuSetupPage *SetupMenu(void);
    virtual bool SetupParse(const char *Name, const char *Value);
@@ -3084,14 +3903,40 @@ const char *
 cPluginYaepghd::CommandLineHelp(void)
 {
    // Return a string that describes all known command line options.
-   return NULL;
+     return 
+         "  -i <IMAGESDIR>, --epgimages=<IMAGESDIR> Set directory where epgimages are stored\n";
 }
+
+const char *cPluginYaepghd::MainMenuEntry(void)
+{
+   if (iHideMenuEntry)
+      return NULL;
+   if (isempty(sMainMenuEntry))
+      return tr("YaepgHD");
+   else
+      return sMainMenuEntry;   
+}
+
 
 bool
 cPluginYaepghd::ProcessArgs(int argc, char *argv[])
 {
    // Implement command line argument processing here if applicable.
-   return true;
+  static const struct option long_options[] = {
+    { "epgimages", required_argument, NULL, 'i' },
+    { 0, 0, 0, 0 }
+  };
+  int c;
+  while ((c = getopt_long(argc, argv, "i:", long_options, NULL)) != -1) {
+    switch (c) {
+      case 'i':
+        sEpgImagesDir=optarg;
+        break;
+      default:
+        return false;
+    }
+  }
+  return true;
 }
 
 bool
@@ -3110,6 +3955,16 @@ cPluginYaepghd::Start(void)
    reelVidWin = new cReelVidWin;
    reelVidWin->Init();
 #endif
+   Icons::InitCharSet();
+   pEPGSearch = cPluginManager::GetPlugin("epgsearch");
+   if (!pEPGSearch) {
+   	   YAEPG_ERROR("EPGSearch does not exist (switch timer disabled)!");
+   }
+
+   pRemoteTimers = cPluginManager::CallFirstService("RemoteTimers::RefreshTimers-v1.0", NULL);
+   if (!pRemoteTimers) {
+   	   YAEPG_ERROR("RemoteTimers does not exist!");
+   }
    return true;
 }
 
@@ -3169,9 +4024,25 @@ cPluginYaepghd::SetupParse(const char *Name, const char *Value)
 
    // Parse your own setup parameters and store their values.
    if      (!strcasecmp(Name, "HideMenuEntry")) { iHideMenuEntry = atoi(Value); }
+   if      (!strcasecmp(Name, "MainMenuEntry")) { strcpy(sMainMenuEntry, Value); }
+   #if defined(MAINMENUHOOKSVERSION) 
+   #if MAINMENUHOOKSVERSNUM >= 10001
+   else if (!strcasecmp(Name, "ReplaceOrgSchedule")) { iReplaceOrgSchedule = atoi(Value); }
+   #endif 
+   #endif
    else if (!strcasecmp(Name, "ChannelChange")) { iChannelChange = atoi(Value); }
+   else if (!strcasecmp(Name, "SwitchOk")) { iSwitchOK = atoi(Value); }
+   else if (!strcasecmp(Name, "RecDlgRed")) { iRecDlgRed = atoi(Value); }
    else if (!strcasecmp(Name, "TimeFormat"))    { iTimeFormat = atoi(Value); }
    else if (!strcasecmp(Name, "ChannelOrder"))  { iChannelOrder = atoi(Value); }
+   else if (!strcasecmp(Name, "ChannelNumber")) { iChannelNumber = atoi(Value); }
+   else if (!strcasecmp(Name, "InfoSymbols"))   { iInfoSymbols = atoi(Value); }
+   else if (!strcasecmp(Name, "SwitchTimer"))   { iSwitchTimer = atoi(Value); }
+   else if (!strcasecmp(Name, "SwitchMinsBefore")){ iSwitchMinsBefore = atoi(Value); }
+   else if (!strcasecmp(Name, "RemoteTimer"))   { iRemoteTimer = atoi(Value); }
+   else if (!strcasecmp(Name, "EpgImages"))     { iEpgImages = atoi(Value); }
+   else if (!strcasecmp(Name, "ResizeImages"))    { iResizeImages = atoi(Value); }
+   else if (!strcasecmp(Name, "ImageExtension"))  { iImageExtension = atoi(Value); }
    else if (!strcasecmp(Name, "Theme"))         { Utf8Strn0Cpy(themeName, Value, sizeof(themeName)); sThemeName = themeName; }
    else                                         { return false; }
 
@@ -3181,18 +4052,21 @@ cPluginYaepghd::SetupParse(const char *Name, const char *Value)
 bool
 cPluginYaepghd::Service(const char *Id, void *Data)
 {
-   if (strcmp(Id, "MainMenuHooksPatch-v1.0::osSchedule") == 0 && iReplaceOrgSchedule)
+#if defined(MAINMENUHOOKSVERSION) 
+#if MAINMENUHOOKSVERSNUM >= 10001
+   if (strcmp(Id, "MainMenuHooksPatch-v1.0::osSchedule") == 0  && iReplaceOrgSchedule)
    {
       if (!Data) {
          return true;
       }
-      cOsdMenu **menu = (cOsdMenu**)Data;
-      if (menu) {
-         *menu = (cOsdMenu*)MainMenuAction();
+      cOsdObject **osd = (cOsdObject**)Data;
+      if (osd) {
+         *osd = (cOsdObject*)MainMenuAction();
       }
       return true;
    }
-
+#endif
+#endif
    return false;
 }
 

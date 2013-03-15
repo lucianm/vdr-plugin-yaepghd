@@ -5,29 +5,11 @@ diff -Nru vdr-1.6.0-vanilla/config.h vdr-1.6.0-yaepghd/config.h
  #define APIVERSION  "1.6.0"
  #define APIVERSNUM   10600  // Version * 10000 + Major * 100 + Minor
  
-+#define YAEPGHDVERSNUM 1
++#define YAEPGHDVERSNUM 2
 +
  // When loading plugins, VDR searches them by their APIVERSION, which
  // may be smaller than VDRVERSION in case there have been no changes to
  // VDR header files since the last APIVERSION. This allows compiled
-diff -Nru vdr-1.6.0-vanilla/device.h vdr-1.6.0-yaepghd/device.h
---- vdr-1.6.0-vanilla/device.h	2008-02-23 15:13:04.000000000 +0200
-+++ vdr-1.6.0-yaepghd/device.h	2009-01-24 23:34:01.000000000 +0200
-@@ -242,12 +242,12 @@
-          ///< Direction (only the sign of Direction is evaluated, positive values
-          ///< switch to higher channel numbers).
- private:
--  eSetChannelResult SetChannel(const cChannel *Channel, bool LiveView);
--         ///< Sets the device to the given channel (general setup).
- protected:
-   virtual bool SetChannelDevice(const cChannel *Channel, bool LiveView);
-          ///< Sets the device to the given channel (actual physical setup).
- public:
-+  eSetChannelResult SetChannel(const cChannel *Channel, bool LiveView);
-+         ///< Sets the device to the given channel (general setup).
-   static int CurrentChannel(void) { return primaryDevice ? currentChannel : 0; }
-          ///< Returns the number of the current channel on the primary device.
-   static void SetCurrentChannel(const cChannel *Channel) { currentChannel = Channel ? Channel->Number() : 0; }
 diff -Nru vdr-1.6.0-vanilla/dvbosd.c vdr-1.6.0-yaepghd/dvbosd.c
 --- vdr-1.6.0-vanilla/dvbosd.c	2007-09-16 11:55:54.000000000 +0300
 +++ vdr-1.6.0-yaepghd/dvbosd.c	2009-01-24 23:40:51.000000000 +0200

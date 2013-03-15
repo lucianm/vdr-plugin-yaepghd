@@ -6,47 +6,46 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Yaepghd 0.0.1\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2010-11-08 17:14+0100\n"
-"PO-Revision-Date: 2010-11-03 07:21+0100\n"
-"Last-Translator: Tomas Saxer <tsaxer@gmx.de>\n"
-"Language-Team:  <vdr@linuxtv.org>\n"
+"POT-Creation-Date: 2010-11-20 18:16+0100\n"
+"PO-Revision-Date: 2009-01-28 10:51+0200\n"
+"Last-Translator: Klaus Schmidinger <kls@cadsoft.de>\n"
+"Language-Team: <vdr@linuxtv.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=ISO-8859-15\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 
 msgid "No Info"
-msgstr "Keine Daten verfügbar."
+msgstr "Aucune données."
 
 msgid "Page up"
-msgstr "Seite hoch"
+msgstr "Page vers le haut"
 
 msgid "Page down"
-msgstr "Seite runter"
+msgstr "Page vers le bas"
 
 msgid "Start"
-msgstr "Anfang"
+msgstr "Démarrer"
 
 msgid "Stop"
-msgstr "Halt"
+msgstr "Arreter"
 
 msgid "Switch timer added"
-msgstr "Umschalttimer angelegt"
+msgstr ""
 
 msgid "Switch timer deleted"
-msgstr "Umschalttimer gelöscht"
+msgstr ""
 
 msgid "Timer added"
-msgstr "Timer angelegt"
+msgstr ""
 
 msgid "Failed to add timer"
-msgstr "Timer konnte nicht angelegt werden"
+msgstr ""
 
 msgid "Remote timer deactivated"
-msgstr "Remote Timer deaktiviert"
+msgstr ""
 
 msgid "Timer deactivated"
-msgstr "Timer deaktiviert"
+msgstr ""
 
 msgid "YaepgHD"
 msgstr "YaepgHD"
@@ -58,19 +57,20 @@ msgid "12h"
 msgstr "12h"
 
 msgid "Up"
-msgstr "Hoch"
+msgstr "Haut"
 
 msgid "Down"
-msgstr "Runter"
+msgstr "Bas"
 
+#, fuzzy
 msgid "Close YaepgHD"
-msgstr "YaepgHD wird geschlossen"
+msgstr "YaepgHD"
 
 msgid "Leave YaepgHD open"
-msgstr "YaepgHD bleibt geöffnet"
+msgstr ""
 
 msgid "Automatic"
-msgstr "Automatisch"
+msgstr "Automatique"
 
 msgid "pixel algo"
 msgstr ""
@@ -82,52 +82,59 @@ msgid "zoom image"
 msgstr ""
 
 msgid "Hide mainmenu entry"
-msgstr "Hauptmenüeintrag verstecken"
+msgstr "Cacher dans le menu principal"
 
 msgid "Main menu entry"
-msgstr "Hauptmenüeintrag"
+msgstr "entrée dans le menu principal"
 
 msgid "Replace original schedule"
-msgstr "Ersetze original Programmführer"
+msgstr "Remplacer le guide des programmes original"
 
 msgid "Channel change"
-msgstr "Kanal wechseln"
+msgstr "Changement de chaîne"
 
 msgid "Switch channel with OK"
-msgstr "Kanal umschalten mit OK"
+msgstr ""
 
 msgid "Record dialog with red button"
-msgstr "Aufnahmedialog bei roter Taste"
+msgstr ""
 
 msgid "Time format"
-msgstr "Zeitformat"
+msgstr "Format horaire"
 
 msgid "Channel order"
-msgstr "Kanalreihenfolge"
+msgstr "Ordre des chaînes"
 
 msgid "Channel number"
-msgstr "Kanalnummer"
+msgstr ""
 
 msgid "Info symbols"
-msgstr "Info Symbole"
+msgstr ""
 
 msgid "EPG images"
-msgstr "EPG Bilder"
+msgstr ""
 
 msgid "  Resize images"
-msgstr " Bildergrößen anpassen "
+msgstr ""
 
+#, fuzzy
 msgid "  Image format"
-msgstr " Bildformat"
+msgstr "Format horaire"
 
 msgid "Switch timer"
-msgstr "Umschalttimer"
+msgstr ""
 
 msgid "  Switch ... minutes before start"
-msgstr "  Umschalten ... Minuten vor Start"
+msgstr ""
 
 msgid "Remote timer"
-msgstr "Remote Timer"
+msgstr ""
 
 msgid "Yet another EPG in HD"
 msgstr "Yet another EPG in HD"
+
+#~ msgid "Manual"
+#~ msgstr "Manuel"
+
+#~ msgid "Semi-automatic"
+#~ msgstr "Semi-automatique"

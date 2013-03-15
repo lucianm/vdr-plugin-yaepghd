@@ -17,3 +17,36 @@ VDR Plugin 'yaepghd' Revision History
 - Fixed a bug in channel listing (Rolf Ahrenberg).
 - Fixed theme selection on the setup page (Rolf Ahrenberg).
 - Fixed cPlugin::ConfigDirectory() to called only from main thread (Rolf Ahrenberg).
+
+2010-10-02: Version 0.0.2 Community Edition
+
+- Use vdr function for channel switching (Rolf Ahrenberg).
+- Add makefile option for debuging output (Rolf Ahrenberg).
+- Fixed a bug in setup menu (Rolf Ahrenberg).
+- Changed compile options in makefile (Rolf Ahrenberg).
+- Added ability to set timers and show event info (gnapheus,tomas))
+- Changed date generation (CR7, tomas))
+- Replace newlines with spaces in EPG Description for e.g tvmovieepg (tomas)
+- Changed makefile for vdr 1.7.10
+- fixed display of wrong week day (tomas) 
+- New MainMenuHooks patch (gnapheus, Joe_D).
+- Fixed hide main menu entry (gnapheus) 
+- Add record dialog and message box - theme files must be adapted  (duffy @ easyvdr)
+- Options for text color and font of the helpbar - theme files must be adapted (gnapheus)
+- Timers are not deleted anymore, but deactivated like in the original program guide (gnapheus)
+- EventInfo now uses 3 equally distributed boxes for T V and * (gnapheus)
+- EventInfo can use the symbols of the VDRSymbols font instead of T, V and * (gnapheus)
+- Changed original default theme according to new EventInfo, Record Dialog and MessageBox (gnapheus)
+- Switchtimer can be set via the epgsearch service interface (gnapheus)
+- The main menu entry can now be set by setup.
+  (Note: when changing the name to something different than the default, it is
+  no more dependent on the OSD language) (gnapheus, copied from epgsearch)
+
+2010-10-24: Version 0.0.3 Community Edition
+
+- added support for remote timers (schmirl, gnapheus)
+- fixed possible memory leak (schmirl)
+- setup option for record dialog with the red button (gnapheus)
+- setup option for switch with OK (gnapheus)
+- several small improvements
+- added support for epg images (gnapheus)
