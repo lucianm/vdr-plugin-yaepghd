@@ -27,8 +27,8 @@
 #include <vdr/timers.h>
 #include <vdr/device.h>
 
-#if defined(APIVERSNUM) && APIVERSNUM < 10600
-#error "VDR-1.6.0 API version or greater is required!"
+#if defined(APIVERSNUM) && APIVERSNUM < 10733
+#error "VDR-1.7.33 API version or greater is required!"
 #endif
 
 // To avoid problems with the old MainMenuHooks-v1.0 patch uncomment next line.
@@ -2846,6 +2846,7 @@ private:
    time_t startTime;
    tArea mainWin;
    cBitmap *mainBmp;
+   cRect videoWindowRect;
    std::vector< cChannel * > chanVec;
    const cEvent *event;
    cTimeMs lastInput;
@@ -2933,6 +2934,7 @@ cYaepghd::~cYaepghd()
    delete helpBar;
    delete recordDlg;
    delete messageBox;
+   cDevice::PrimaryDevice()->ScaleVideo(); // rescale to full size
 #ifdef YAEPGHD_REEL_EHD
    reelVidWin->Close();
 #endif
@@ -2970,11 +2972,13 @@ cYaepghd::Show(void)
 #ifdef YAEPGHDVERSNUM
    /* Set up the video window parameters */
    if (VID_WIN_GEOM.w != 0 && VID_WIN_GEOM.h != 0) {
-      osd->vidWin.x1 = VID_WIN_GEOM.x;
-      osd->vidWin.y1 = VID_WIN_GEOM.y;
-      osd->vidWin.x2 = VID_WIN_GEOM.x + VID_WIN_GEOM.w;
-      osd->vidWin.y2 = VID_WIN_GEOM.y + VID_WIN_GEOM.h;
-      osd->vidWin.bpp = 12;
+      // ask the output device to scale the video when next flushing the OSD, if it supports this
+      cRect vidWinRect(
+         VID_WIN_GEOM.x,
+         VID_WIN_GEOM.y,
+         VID_WIN_GEOM.w,
+         VID_WIN_GEOM.h);
+      videoWindowRect = cDevice::PrimaryDevice()->CanScaleVideo(vidWinRect);
    }
 #endif
 
@@ -3576,7 +3580,7 @@ cYaepghd::SwitchToCurrentChannel(bool closeVidWin)
    if (gridChan && (gridChan->Number() != cDevice::CurrentChannel())) {
       /*
        * The eHD card doesn't seem to like changing channels while the video
-       * plane is sacled down.  To get around this problem we close/reopen the
+       * plane is scaled down.  To get around this problem we close/reopen the
        * video window across channel changes.
        */
 #ifdef YAEPGHD_REEL_EHD
@@ -3649,6 +3653,7 @@ cYaepghd::Draw(void)
    }  
    
    osd->DrawBitmap(0, 0, *mainBmp);
+   cDevice::PrimaryDevice()->ScaleVideo(videoWindowRect); // scale to our desired video window size if supported
    osd->Flush();
 }
 
