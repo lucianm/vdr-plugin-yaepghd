@@ -2,22 +2,22 @@ bgImage=anthra_1280/bg.png
 recDlgImage=anthra_1280/rec.png
 msgBgImage=anthra_1280/msg.png
 
-gridEventFont="VDRSymbols Sans:Book;18"
+gridEventFont="VDRSymbols Sans:Book;20"
 gridChanFont="VDRSymbols Sans:Book;18"
-gridTimeFont="VDRSymbols Sans:Book;14"
-gridDateFont="VDRSymbols Sans:Book;18"
-eventTitleFont="VDRSymbols Sans:Book;27"
+gridTimeFont="VDRSymbols Sans:Book;15"
+gridDateFont="VDRSymbols Sans:Book;20"
+eventTitleFont="VDRSymbols Sans:Book;28"
 eventTimeFont="VDRSymbols Sans:Book;20"
 eventDescFont="VDRSymbols Sans:Book;18"
 eventDateFont="VDRSymbols Sans:Book;20"
-eventInfoFont="VDRSymbols Sans:Book;22"
-recDlgFont="VDRSymbols Sans:Book;20"
-msgBoxFont="VDRSymbols Sans:Book;20"
-helpFont="VDRSymbols Sans:Book;18"
+eventInfoFont="VDRSymbols Sans:Book;21"
+recDlgFont="VDRSymbols Sans:Book;21"
+msgBoxFont="VDRSymbols Sans:Book;21"
+helpFont="VDRSymbols Sans:Book;20"
 
 gridEventColor=FF5F5F5F
-gridSelBg=FF982900 
-gridSelFg=FFFFFFFF 
+gridSelBg=FF982900
+gridSelFg=FFFFFFFF
 gridSepColor=FF5F5F5F
 gridChanColor=FFFFFFFF
 gridTimeColor=FFFFFFFF
@@ -32,47 +32,45 @@ recDlgColor=FFFFFFFF
 msgBoxColor=FFFFFFFF
 helpColor=FFFFFFFF
 
-gridEventGeom=300,373,895,266
-gridChanGeom=65,373,200,266
-gridTimeGeom=266,334,966,8
-gridDateGeom=65,325,200,20
-
-eventTitleGeom=65,40,650,43
-eventTimeGeom=65,84,190,43 
-eventDescGeom=65,135,646,190
-eventDateGeom=575,84,120,43 
-eventEpgImageGeom=720,135,240,180
-eventInfoGeom=295,86,175,35
-
-tlineLocGeom=253,351,1066,33
-tlineBoxGeom=0,0,20,8
-
-vidWinGeom=695,45,525,290
-
-helpGeom=70,665,1120,20
+gridEventGeom=273,375,943,284
+gridChanGeom=30,373,200,285
+gridTimeGeom=250,331,967,8
+gridDateGeom=30,313,200,43
 gridHorizSpace=10
 gridNumChans=8
-leftArrowWidth=13
-rightArrowWidth=26
-textBorder=4
-textSpace=6
 
+eventTitleGeom=23,20,650,43
+eventTimeGeom=23,67,200,43
+eventDescGeom=23,120,667,200
+eventDateGeom=573,67,113,43
+eventInfoGeom=293,67,143,43
+tlineLocGeom=250,351,967,33
+#tlineBoxGeom=0,0,20,8
+tlineBoxGeom=0,0,1,316
+
+vidWinGeom=720,27,527,296
+helpGeom=15,682,1251,27
+leftArrowWidth=13
+rightArrowWidth=27
+textBorder=3
+textSpace=3
+eventInfoAlign=2
+#    1 = Timer | VPS | Running  (default)
+#    2 = Running | VPS | Timer
 
 # Record Dialog
 
 recDlgGeom=440,381,400,133
 recTitleGeom=13,8,373,53
 recTimeGeom=0,1,0,1
-recStartGeom=26,64,100,26
-recEndGeom=26,100,100,26
-recFreqGeom=26,170,100,26
-recStInpGeom=201,64,195,26
-recEnInpGeom=201,100,195,26
-recFrInpGeom=201,194,195,26
+recStartGeom=27,64,100,27
+recEndGeom=27,101,100,27
+recFreqGeom=27,171,100,27
+recStInpGeom=201,64,195,27
+recEnInpGeom=201,101,195,27
+recFrInpGeom=201,171,195,27
 
 # Message Box
 
-msgBoxGeom=306,410,666,53
-msgBoxFont="VDRSymbols Sans;22"
-msgBoxColor=FFFFFFFF
-msgBoxGeom=306,410,666,53
+msgBoxGeom=307,380,667,53
+
