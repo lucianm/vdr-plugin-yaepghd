@@ -2969,7 +2969,6 @@ cYaepghd::Show(void)
                          BG_IMAGE->Bpp());
    osd->SetAreas(&mainWin, 1);
 
-#ifdef YAEPGHDVERSNUM
    /* Set up the video window parameters */
    if (VID_WIN_GEOM.w != 0 && VID_WIN_GEOM.h != 0) {
       // ask the output device to scale the video when next flushing the OSD, if it supports this
@@ -2980,7 +2979,6 @@ cYaepghd::Show(void)
          VID_WIN_GEOM.h);
       videoWindowRect = cDevice::PrimaryDevice()->CanScaleVideo(vidWinRect);
    }
-#endif
 
 #ifdef YAEPGHD_REEL_EHD
    reelVidWin->Open(VID_WIN_GEOM);
