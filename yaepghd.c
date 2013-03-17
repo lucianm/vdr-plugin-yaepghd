@@ -1720,14 +1720,14 @@ cYaepgEventInfo::Generate(void)
    const char* v=NULL;
    const char* r=NULL;
    
-   int timerMatch=tmNone; 
+   eTimerMatch timerMatch=tmNone; 
    cTimer* ti;
 
    if (iRemoteTimer && pRemoteTimers && event) {  
       RemoteTimers_GetMatch_v1_0 rtMatch;
       rtMatch.event = event;
       pRemoteTimers->Service("RemoteTimers::GetMatch-v1.0", &rtMatch);
-      timerMatch = rtMatch.timerMatch;
+      timerMatch = (eTimerMatch)rtMatch.timerMatch;
       ti = rtMatch.timer;
    }
    else
@@ -3023,7 +3023,7 @@ void
 cYaepghd::AddDelTimer(void)
  {
       const cEvent *event=gridEvents->Event();
-	  int timerMatch;
+	  eTimerMatch timerMatch = tmNone;
 	  cTimer *ti;
 	  ti=Timers.GetMatch(event, &timerMatch);
 	  if (timerMatch==tmFull)
@@ -3249,7 +3249,7 @@ cYaepghd::ProcessKey(eKeys key)
                state = osEnd;
 		 }
          else{
-		    int timerMatch;
+		    eTimerMatch timerMatch = tmNone;
 			Timers.GetMatch(event, &timerMatch);
 		    if (!(timerMatch==tmFull)){
 				
@@ -3279,7 +3279,7 @@ cYaepghd::ProcessKey(eKeys key)
 		    }
  	        else {
 			   AddDelTimer();  // delete timer
-			   int timerMatch;
+			   eTimerMatch timerMatch = tmNone;
 			   Timers.GetMatch(event, &timerMatch);
                if (timerMatch==tmNone){	
 			      messageBox = new cYaepgMsg();
@@ -3295,7 +3295,7 @@ cYaepghd::ProcessKey(eKeys key)
       case kRed:
          if (event && event->EventID()!=0){
             if (iRecDlgRed) {
-               int timerMatch;
+               eTimerMatch timerMatch = tmNone;
 			   Timers.GetMatch(event, &timerMatch);
                if (!(timerMatch==tmFull)){				
 	              if (iRemoteTimer && pRemoteTimers) {
@@ -3324,7 +3324,7 @@ cYaepghd::ProcessKey(eKeys key)
 		       }
  	           else {
 			      AddDelTimer();  // delete timer
-			      int timerMatch;
+			      eTimerMatch timerMatch = tmNone;
 			      Timers.GetMatch(event, &timerMatch);
                   if (timerMatch==tmNone){	
 			         messageBox = new cYaepgMsg();
