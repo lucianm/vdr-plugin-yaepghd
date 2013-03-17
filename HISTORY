@@ -1,22 +1,26 @@
 VDR Plugin 'yaepghd' Revision History
 -------------------------------------
 
-2009-xx-xx: Version 0.0.1
+2013-03-XX: Version 0.0.4
 
-- Initial revision.
-- Rewrite of the yaepg plugin.
-- Support for themes.
-- Added gettext support (Rolf Ahrenberg).
-- Updated and added patch for vdr-1.6.0 (Rolf Ahrenberg).
-- Changed cReelVidWin to use cThread (Rolf Ahrenberg).
-- Added support for MainMenuHooks patch (Rolf Ahrenberg).
-- Renamed REEL_EHD to YAEPGHD_REEL_EHD and moved the setting into Makefile (Rolf Ahrenberg).
-- Fixed couple of crash bugs (Rolf Ahrenberg).
-- Changed color key layout to better match the VDR standard (Rolf Ahrenberg).
-- Added Finnish translation (Rolf Ahrenberg).
-- Fixed a bug in channel listing (Rolf Ahrenberg).
-- Fixed theme selection on the setup page (Rolf Ahrenberg).
-- Fixed cPlugin::ConfigDirectory() to called only from main thread (Rolf Ahrenberg).
+- at least for now, this version is no longer hosted at vdr-developer.org
+  as the old project (after ver. 0.0.1) still seems to be abandoned, check
+  the README file for the links
+- switched to ScaleVideo API introduced with vdr-1.7.33 and dropped
+  old patch
+- switched MAkefile to new style introduced with vdr-1.7.34
+- integrated extra plugin themes found in the community edition thread
+  at vdr-portal.de
+- updated anthra_1280 theme with the one from pc_medusa at vdr-portal.de
+
+2010-10-24: Version 0.0.3 Community Edition
+
+- added support for remote timers (schmirl, gnapheus)
+- fixed possible memory leak (schmirl)
+- setup option for record dialog with the red button (gnapheus)
+- setup option for switch with OK (gnapheus)
+- several small improvements
+- added support for epg images (gnapheus)
 
 2010-10-02: Version 0.0.2 Community Edition
 
@@ -41,12 +45,19 @@ VDR Plugin 'yaepghd' Revision History
 - The main menu entry can now be set by setup.
   (Note: when changing the name to something different than the default, it is
   no more dependent on the OSD language) (gnapheus, copied from epgsearch)
+2009-xx-xx: Version 0.0.1
 
-2010-10-24: Version 0.0.3 Community Edition
-
-- added support for remote timers (schmirl, gnapheus)
-- fixed possible memory leak (schmirl)
-- setup option for record dialog with the red button (gnapheus)
-- setup option for switch with OK (gnapheus)
-- several small improvements
-- added support for epg images (gnapheus)
+- Initial revision.
+- Rewrite of the yaepg plugin.
+- Support for themes.
+- Added gettext support (Rolf Ahrenberg).
+- Updated and added patch for vdr-1.6.0 (Rolf Ahrenberg).
+- Changed cReelVidWin to use cThread (Rolf Ahrenberg).
+- Added support for MainMenuHooks patch (Rolf Ahrenberg).
+- Renamed REEL_EHD to YAEPGHD_REEL_EHD and moved the setting into Makefile (Rolf Ahrenberg).
+- Fixed couple of crash bugs (Rolf Ahrenberg).
+- Changed color key layout to better match the VDR standard (Rolf Ahrenberg).
+- Added Finnish translation (Rolf Ahrenberg).
+- Fixed a bug in channel listing (Rolf Ahrenberg).
+- Fixed theme selection on the setup page (Rolf Ahrenberg).
+- Fixed cPlugin::ConfigDirectory() to called only from main thread (Rolf Ahrenberg).

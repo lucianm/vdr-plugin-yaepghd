@@ -1,10 +1,15 @@
 This is a "plugin" for the Video Disk Recorder (VDR).
 
-Written by:                  bball <bball950@yahoo.com>, Community Edition
+Written by:                  bball <bball950@yahoo.com>, Community Edition (various contributors from the vdr-portal.de, check HISTORY)
+Forked ('cause abandoned)    by Lucian Muresan
 
-Project's homepage:          http://projects.vdr-developer.org/projects/show/plg-yaepghd (original)
+Project homepage:            http://projects.vdr-developer.org/projects/show/plg-yaepghd (original, outdated)
+Project wiki page (en):      http://linuxtv.org/vdrwiki/index.php/Yaepghd-plugin/
+Project wiki page (de):      http://www.vdr-wiki.de/wiki/index.php/Yaepghd-plugin
+Project repository:          https://github.com/lucianm/vdr-plugin-yaepghd
+Project releases:            http://sourceforge.net/projects/vdryaepghd/files
+Project bug tracker          https://github.com/lucianm/vdr-plugin-yaepghd/issues
 
-Latest version available at: URL
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -79,8 +84,8 @@ Options:
 Notes:
 - This README has to be updated !
 
-- Yaepghd patch provides an optional VDR API modications for scaling
-  video window. The video stays untouched without the patch.
+- Yaepghd patch is no longer supported, as now the ScaleVideo API introduced with
+  vdr-1.7.33 is used.
 
 - Video window doesn't scale back to normal when quiting the plugin
   with FF cards.
@@ -90,4 +95,3 @@ Notes:
 
 - The colors of the epg images may be distorted if AntiAliasing is enabled in vdr osd setup.
 
-  
