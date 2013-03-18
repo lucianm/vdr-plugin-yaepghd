@@ -3863,7 +3863,7 @@ cMenuSetupYaepg::~cMenuSetupYaepg()
  * cPluginYaepghd
  *****************************************************************************
  */
-static const char *VERSION        = "0.0.4_pre20130317";
+static const char *VERSION        = "0.0.4_pre20130318";
 static const char *DESCRIPTION    = trNOOP("Yet another EPG in HD");
 
 class cPluginYaepghd : public cPlugin {
