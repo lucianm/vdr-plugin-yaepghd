@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Yaepghd 0.0.4\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-03-18 22:04+0100\n"
-"PO-Revision-Date: 2013-03-18 22:03+0100\n"
+"POT-Creation-Date: 2013-03-24 13:54+0100\n"
+"PO-Revision-Date: 2013-03-24 14:05+0100\n"
 "Last-Translator: Lucian Muresan <lucianm@users.sorceforge.net>\n"
 "Language-Team:  <vdr@linuxtv.org>\n"
 "Language: Romanian\n"
@@ -59,10 +59,10 @@ msgid "12h"
 msgstr "12h"
 
 msgid "Up"
-msgstr "sus"
+msgstr "în sus"
 
 msgid "Down"
-msgstr "Runter"
+msgstr "în jos"
 
 msgid "Close YaepgHD"
 msgstr "YaepgHD este închis"
@@ -96,6 +96,15 @@ msgstr "Comutare canal"
 
 msgid "Switch channel with OK"
 msgstr "Comută canalul cu tasta 'Ok'"
+
+msgid "Mainmenu with BACK"
+msgstr "Revino în meniul principal cu tasta 'Înapoi'"
+
+msgid "   Select menu at position..."
+msgstr "   Selectează meniul de pe poziția"
+
+msgid "      Select submenu at position..."
+msgstr "      Selectează submeniul de pe poziția"
 
 msgid "Record dialog with red button"
 msgstr "Dialogul înregistrare cu tasta roșie"

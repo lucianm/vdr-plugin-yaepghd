@@ -26,6 +26,7 @@
 #include <vdr/osd.h>
 #include <vdr/timers.h>
 #include <vdr/device.h>
+#include <vdr/interface.h>
 
 #if defined(APIVERSNUM) && APIVERSNUM < 10733
 #error "VDR-1.7.33 API version or greater is required!"
@@ -168,6 +169,9 @@ static int         iReplaceOrgSchedule      = false;
 #endif
 static int         iChannelChange           = CHANNEL_CHANGE_CLOSE;
 static int         iSwitchOK                = false;  
+static int         iMenuBACK                = false;
+static int         iMenuBackMenuItems       = 0;
+static int         iMenuBackSubMenuItems    = 0;
 static int         iTimeFormat              = TIME_FORMAT_12H;
 static int         iChannelOrder            = CHANNEL_ORDER_DOWN;
 static int         iChannelNumber           = false;
@@ -211,7 +215,7 @@ struct Epgsearch_switchtimer_v1_0
 // in/out
       int switchMinsBefore;
       int announceOnly;
-// out   		
+// out
       bool success;              // result
 };
 
@@ -310,7 +314,7 @@ void Icons::InitCharSet()
 
   if(CodeSet && strcasestr(CodeSet,"UTF-8")!=0)
     IsUTF8=true;
-    
+
   cStringList fontlist;
   cFont::GetAvailableFontNames(&fontlist);
   if (fontlist.Find("VDRSymbols Sans:Book") > 0) {
@@ -894,7 +898,7 @@ cYaepgTextBox::Generate(void)
       /* Remove newlines in descriptions */
    char *newlineText = tokText;
    strreplace(newlineText, '\n', ' ');
-   
+
    /* Break text up into lines */
    char *line, *nextLine = tokText;
 
@@ -1464,18 +1468,18 @@ cYaepgGridChans::Generate(void)
       chanInfo[i].nameBox.FgColor(GRID_CHAN_COLOR);
       chanInfo[i].nameBox.BgColor(clrTransparent);
       chanInfo[i].nameBox.Flags((eTextFlags)(TBOX_VALIGN_LEFT | TBOX_HALIGN_CENTER));
-      
-	  if (iChannelNumber)
-	  {
-	     chanInfo[i].nameBox.X(geom.x + (geom.w / 2));
-		 chanInfo[i].nameBox.W(geom.w / 2);
-	  }
-	  else
-	  {
-	     chanInfo[i].nameBox.X(geom.x);
-		 chanInfo[i].nameBox.W(geom.w );
-	  }
-	  
+
+      if (iChannelNumber)
+      {
+          chanInfo[i].nameBox.X(geom.x + (geom.w / 2));
+          chanInfo[i].nameBox.W(geom.w / 2);
+      }
+      else
+      {
+          chanInfo[i].nameBox.X(geom.x);
+          chanInfo[i].nameBox.W(geom.w );
+      }
+
       chanInfo[i].nameBox.Y(geom.y + ROUND((float)i * (chanRowHeight + (float)horizSpace)));
       chanInfo[i].nameBox.H(ROUND(chanRowHeight));
       chanInfo[i].nameBox.Generate();
@@ -1495,7 +1499,7 @@ cYaepgGridChans::Draw(cBitmap *bmp)
 
    for (int i = 0; i < (int)chanInfo.size(); i++) {
        if (iChannelNumber)
-	      chanInfo[i].numBox.Draw(bmp);
+          chanInfo[i].numBox.Draw(bmp);
        chanInfo[i].nameBox.Draw(bmp);
    }
 }
@@ -1719,7 +1723,7 @@ cYaepgEventInfo::Generate(void)
    const char* t=NULL;
    const char* v=NULL;
    const char* r=NULL;
-   
+
    eTimerMatch timerMatch=tmNone; 
    cTimer* ti;
 
@@ -1732,7 +1736,7 @@ cYaepgEventInfo::Generate(void)
    }
    else
       ti=Timers.GetMatch(event, &timerMatch);
-   
+
    switch (timerMatch) {
       case tmFull:
          if (iInfoSymbols && iVDRSymbols) 
@@ -1749,29 +1753,29 @@ cYaepgEventInfo::Generate(void)
       default:
          t=" ";
          break;
-   }   
-      
+   }
+
    if (iSwitchTimer && pEPGSearch && event) {
       Epgsearch_switchtimer_v1_0* serviceData = new Epgsearch_switchtimer_v1_0;
-	  serviceData->event = event;
-	  serviceData->mode = 0;
+      serviceData->event = event;
+      serviceData->mode = 0;
       if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
          if(serviceData->success){
             t=(iInfoSymbols && iVDRSymbols)?Icons::ArrowCCW():"S" ;
-		 }
+         }
          delete serviceData;
-      }   
-   }   
+      }
+   }
    if (event->Vps() && (event->Vps() - event->StartTime()))
       v=(iInfoSymbols && iVDRSymbols)?Icons::VPS():"V";
    else
       v=" ";
-         
+
    if (event->SeenWithin(30) && event->IsRunning())
       r=(iInfoSymbols && iVDRSymbols)?Icons::Running():"*";
    else
       r=" " ;
-      
+
    switch (EVENT_INFO_ALIGN){
       case 2:
          buffer[0] = cString::sprintf("%s", r);
@@ -1785,7 +1789,7 @@ cYaepgEventInfo::Generate(void)
          buffer[2] = cString::sprintf("%s", r);
          break;
    }
-   
+
    int boxWidth = geom.w / 3;
    for (int i = 0; i < 3; i++) {
       boxes[i].Text(buffer[i]);
@@ -1805,7 +1809,7 @@ void
 cYaepgEventInfo::Draw(cBitmap *bmp)
 {
    YAEPG_INFO("Drawing event info at (%d %d)", geom.x, geom.y);
-   
+
    for (int i = 0; i < 3; i++) {
       boxes[i].Draw(bmp);
    }
@@ -1840,18 +1844,18 @@ void
 cYaepgEventEpgImage::Generate(void)
 {
    Magick::Image image;
-  
+
    char *strFilename = NULL;
-   
+
    if (-1 == asprintf(&strFilename, "%s/%d.%s",sEpgImagesDir.c_str(),event->EventID(), imageExtensionTexts[iImageExtension]))
    {
-	   YAEPG_ERROR("Couldn't built epg image filename!");
-	   delete strFilename;
-	   return;
+       YAEPG_ERROR("Couldn't built epg image filename!");
+       delete strFilename;
+       return;
    }
-   
+
    try {
-	  Geometry geo;
+      Geometry geo;
       image.read(strFilename);
       geo = image.size();
       int w = geo.width();
@@ -1875,15 +1879,15 @@ cYaepgEventEpgImage::Generate(void)
          w = geo.width();
          h = geo.height();
       }
-      
+
       image.opacity(OpaqueOpacity);
       image.backgroundColor(Color(0, 0, 0, 0));
       image.quantizeColorSpace(RGBColorspace);
       image.quantizeColors(255);
       image.quantize();
-     
+
       EpgImage = new cBitmap(geom.w, geom.h, image.depth());
-      
+
       // center image
       int x = 0;
       int y = 0;
@@ -2215,7 +2219,7 @@ cYaepgHelpBar::Draw(cBitmap *bmp)
    if (geom.w < 40) {
       return;
    }
-   
+
    for (int i = 0; i < 4; i++) {
       boxes[i].Draw(bmp);
    }
@@ -2234,7 +2238,7 @@ public:
    cYaepgInputTime(void) : t(0) {}
    void UpdateTime(time_t _t);
    eOSState ProcessKey(eKeys key);
-   struct tm recTime;   
+   struct tm recTime;
 };
 
 void
@@ -2461,8 +2465,7 @@ cYaepgRecDlg::AddTimer(void)
          strncpy(file, event->Title(), sizeof(file));
     }
     snprintf(eventStr, 256, "%d:%d:%s:%04d:%04d:%d:%d:%s:",
-             flags, channel, dayStr, start, stop,
-	     priority, lifetime, file);
+        flags, channel, dayStr, start, stop, priority, lifetime, file);
     if (recTimer->Parse(eventStr) == false) {
       delete recTimer;
       return false;
@@ -2478,7 +2481,7 @@ cYaepgRecDlg::AddTimer(void)
     else {
       Timers.Add(recTimer);
       Timers.Save();
-    }    
+    }
     return true;
 }
 
@@ -2508,13 +2511,13 @@ cYaepgRecDlg::ProcessKey(eKeys key)
          if (curY > 0) {
            curY--;
            state = osContinue;
-       	 }
+         }
          break;
       case kDown:
          if (curY < 1) {
            curY++;
            state = osContinue;
-      	 }
+         }
          break;
       default:
          state = osUnknown;
@@ -2533,7 +2536,7 @@ cYaepgRecDlg::UpdateEvent(const cEvent *_event)
    /* Update the event title */
    titleBox.Text(event->Title());
    titleBox.Generate();
-   
+
    startBox.Generate();
    endBox.Generate();
 
@@ -2574,7 +2577,7 @@ cYaepgRecDlg::Draw(cBitmap *bmp)
    timeBox.Draw(bmp);
    startBox.Draw(bmp);
    endBox.Draw(bmp);
-   
+
    switch (curY) {
    case 0:
       endInput.BgColor(clrTransparent);
@@ -3004,7 +3007,7 @@ cYaepghd::Show(void)
    helpBar = new cYaepgHelpBar();
    recordDlg = NULL;
    messageBox = NULL;
-   
+
    if (iRemoteTimer && pRemoteTimers) {
       cString errorMsg;
       if (!pRemoteTimers->Service("RemoteTimers::RefreshTimers-v1.0", &errorMsg)) {
@@ -3014,108 +3017,108 @@ cYaepghd::Show(void)
       }
    }
 
-   Draw(); 
+   Draw();
 }
 
 void
 cYaepghd::AddDelTimer(void)
- {
-      const cEvent *event=gridEvents->Event();
-	  eTimerMatch timerMatch = tmNone;
-	  cTimer *ti;
-	  ti=Timers.GetMatch(event, &timerMatch);
-	  if (timerMatch==tmFull)
-	  {
-         if (ti) 
-		 {
+{
+    const cEvent *event=gridEvents->Event();
+    eTimerMatch timerMatch = tmNone;
+    cTimer *ti;
+    ti=Timers.GetMatch(event, &timerMatch);
+    if (timerMatch==tmFull)
+    {
+        if (ti)
+        {
             ti->OnOff();
-		 }   
-      }
-	  else
-	  {
-         cTimer *timer = new cTimer(event);
-         cTimer *t = Timers.GetTimer(timer);
-         if (t) {
+        }
+    }
+    else
+    {
+        cTimer *timer = new cTimer(event);
+        cTimer *t = Timers.GetTimer(timer);
+        if (t) {
             t->OnOff();
             delete timer;
-         }
-         else {
+        }
+        else {
             Timers.Add(timer);
-	     }
-      }
-      Timers.SetModified();
-      eventInfo->UpdateEvent(event);     
- }
+        }
+    }
+    Timers.SetModified();
+    eventInfo->UpdateEvent(event);
+}
 
 void 
 cYaepghd::AddDelSwitchTimer()
 {
-	const cEvent *event = gridEvents->Event();
-	bool SwitchTimerExits = false;
+    const cEvent *event = gridEvents->Event();
+    bool SwitchTimerExits = false;
     if (pEPGSearch && event) {
-	   Epgsearch_switchtimer_v1_0* serviceData = new Epgsearch_switchtimer_v1_0;
-	   serviceData->event = event;
-	   serviceData->mode = 0;
-       if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
-          SwitchTimerExits=serviceData->success;
-          delete serviceData;
-       } 
-       else {
-          delete serviceData;
-	      YAEPG_ERROR("Epgsearch-switchtimer-v1.0: EPGSearch does not support this service!");
-	      return;
-	   }   
-       if (!SwitchTimerExits) {
-          serviceData = new Epgsearch_switchtimer_v1_0;
-	      serviceData->event = event;
-	      serviceData->mode = 1;
-	      serviceData->switchMinsBefore = iSwitchMinsBefore;	 
-	      serviceData->announceOnly = false;
-          if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
-             if (serviceData->success) {
-  	 	        messageBox = new cYaepgMsg();
-        	    const char *msgtext;
-	            msgtext = tr("Switch timer added");
-	            messageBox->UpdateMsg(msgtext);
-	            msgBoxStart = cTimeMs::Now();
-         	    needsRedraw = true; 
-    	        delete serviceData;
-    	     }   
-    	  }   
-    	  else {
-		     delete serviceData;
-	         YAEPG_ERROR("Epgsearch-switchtimer-v1.0: EPGSearch does not support this service!");
-	         return;
-	      }   
-    	}
+        Epgsearch_switchtimer_v1_0* serviceData = new Epgsearch_switchtimer_v1_0;
+        serviceData->event = event;
+        serviceData->mode = 0;
+        if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
+            SwitchTimerExits=serviceData->success;
+            delete serviceData;
+        }
         else {
-       	   serviceData = new Epgsearch_switchtimer_v1_0;
-	       serviceData->event = event;
-	       serviceData->mode = 2;
-           if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
-              if (serviceData->success) {
-				 messageBox = new cYaepgMsg();
-                 const char *msgtext;
-	             msgtext = tr("Switch timer deleted");
-	             messageBox->UpdateMsg(msgtext);
-	             msgBoxStart = cTimeMs::Now();
-         	     needsRedraw = true; 
-    	         delete serviceData;
-    	      }   
-		   }
-    	   else {
-		      delete serviceData;
-	          YAEPG_ERROR("Epgsearch-switchtimer-v1.0: EPGSearch does not support this service!");
-	          return;
-	       }    
-	    }   
+            delete serviceData;
+            YAEPG_ERROR("Epgsearch-switchtimer-v1.0: EPGSearch does not support this service!");
+            return;
+        }
+        if (!SwitchTimerExits) {
+            serviceData = new Epgsearch_switchtimer_v1_0;
+            serviceData->event = event;
+            serviceData->mode = 1;
+            serviceData->switchMinsBefore = iSwitchMinsBefore;
+            serviceData->announceOnly = false;
+            if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
+                if (serviceData->success) {
+                    messageBox = new cYaepgMsg();
+                    const char *msgtext;
+                    msgtext = tr("Switch timer added");
+                    messageBox->UpdateMsg(msgtext);
+                    msgBoxStart = cTimeMs::Now();
+                    needsRedraw = true; 
+                    delete serviceData;
+                }
+            }
+            else {
+                delete serviceData;
+                YAEPG_ERROR("Epgsearch-switchtimer-v1.0: EPGSearch does not support this service!");
+                return;
+            }
+        }
+        else {
+            serviceData = new Epgsearch_switchtimer_v1_0;
+            serviceData->event = event;
+            serviceData->mode = 2;
+            if (pEPGSearch->Service("Epgsearch-switchtimer-v1.0", serviceData)){
+                if (serviceData->success) {
+                   messageBox = new cYaepgMsg();
+                   const char *msgtext;
+                   msgtext = tr("Switch timer deleted");
+                   messageBox->UpdateMsg(msgtext);
+                   msgBoxStart = cTimeMs::Now();
+                   needsRedraw = true; 
+                   delete serviceData;
+                }
+            }
+            else {
+                delete serviceData;
+                YAEPG_ERROR("Epgsearch-switchtimer-v1.0: EPGSearch does not support this service!");
+                return;
+            }
+        }
     }
-    else { 
-	   YAEPG_ERROR("EPGSearch does not exist!");
+    else {
+       YAEPG_ERROR("EPGSearch does not exist!");
     }
 }
 
-void 
+void
 cYaepghd::AddDelRemoteTimer()
 {
    const cEvent *event=gridEvents->Event();
@@ -3169,176 +3172,191 @@ cYaepghd::AddDelRemoteTimer()
 eOSState
 cYaepghd::ProcessKey(eKeys key)
 {
-   eOSState state = cOsdObject::ProcessKey(key);
-     
-   needsRedraw = false;
-   
-   if (recordDlg != NULL && state == osUnknown) {
-	  state=recordDlg->ProcessKey(key);
-	  if (state == osContinue) {
-	       needsRedraw = true;
-      }
-      switch (key & ~k_Repeat) {
-      case kOk:
-      {
-         const char *msgtext;
-         msgtext = recordDlg->AddTimer() ? tr("Timer added") : tr("Failed to add timer");
-         delete recordDlg;
-	     recordDlg = NULL;
-	     messageBox = new cYaepgMsg();
-	     messageBox->UpdateMsg(msgtext);
-	     msgBoxStart = cTimeMs::Now();
-	     eventInfo->UpdateEvent(event);     
-	     needsRedraw = true;
-         state = osContinue;
-	     break;
-	  } 
-      case kBack:
-      {
-         delete recordDlg;
-	     recordDlg = NULL;
-	     needsRedraw = true;
-         state = osContinue;
-	     break;
-	  }   
-      default:
-         state = osContinue;
-	     break;
-       }
-   }
-   
-   if (state == osUnknown) {
-      switch (key & ~k_Repeat) {
-      case kBack:
-         state = osEnd;
-         break;
-      case kLeft:
-         MoveCursor(DIR_LEFT);
-         needsRedraw = true;
-         state = osContinue;
-         break;
+    eOSState state = cOsdObject::ProcessKey(key);
+
+    needsRedraw = false;
+
+    if (recordDlg != NULL && state == osUnknown) {
+    state=recordDlg->ProcessKey(key);
+        if (state == osContinue) {
+            needsRedraw = true;
+        }
+        switch (key & ~k_Repeat) {
+            case kOk:
+            {
+                const char *msgtext;
+                msgtext = recordDlg->AddTimer() ? tr("Timer added") : tr("Failed to add timer");
+                delete recordDlg;
+                recordDlg = NULL;
+                messageBox = new cYaepgMsg();
+                messageBox->UpdateMsg(msgtext);
+                msgBoxStart = cTimeMs::Now();
+                eventInfo->UpdateEvent(event);
+                needsRedraw = true;
+                state = osContinue;
+                break;
+            }
+            case kBack:
+            {
+                delete recordDlg;
+                recordDlg = NULL;
+                needsRedraw = true;
+                state = osContinue;
+                break;
+            }
+            default:
+                state = osContinue;
+                break;
+        }
+    }
+
+    if (state == osUnknown) {
+        switch (key & ~k_Repeat) {
+        case kBack:
+            if (iMenuBACK) {
+                cRemote::Put(kMenu);
+                cRemote::Put(kMenu);
+                int i;
+                for (i = 1; i < iMenuBackMenuItems; i++) {
+                    cRemote::Put(kDown);
+                }
+                if (iMenuBackSubMenuItems) {
+                    cRemote::Put(kOk);
+                    for (i = 1; i < iMenuBackSubMenuItems; i++) {
+                        cRemote::Put(kDown);
+                    }
+                }
+             } else {
+                state = osEnd;
+             }
+             break;
+        case kLeft:
+             MoveCursor(DIR_LEFT);
+             needsRedraw = true;
+             state = osContinue;
+             break;
       case kRight:
-         MoveCursor(DIR_RIGHT);
-         needsRedraw = true;
-         state = osContinue;
-         break;
+             MoveCursor(DIR_RIGHT);
+             needsRedraw = true;
+             state = osContinue;
+             break;
       case kUp:
-         MoveCursor(DIR_UP);
-         needsRedraw = true;
-         if (iChannelChange == CHANNEL_CHANGE_AUTOMATIC) {
-            SwitchToCurrentChannel();
-         }
-         state = osContinue;
-         break;
+             MoveCursor(DIR_UP);
+             needsRedraw = true;
+             if (iChannelChange == CHANNEL_CHANGE_AUTOMATIC) {
+                SwitchToCurrentChannel();
+             }
+             state = osContinue;
+             break;
       case kDown:
-         MoveCursor(DIR_DOWN);
-         needsRedraw = true;
-         if (iChannelChange == CHANNEL_CHANGE_AUTOMATIC) {
-            SwitchToCurrentChannel();
-         }
-         state = osContinue;
-         break;
+             MoveCursor(DIR_DOWN);
+             needsRedraw = true;
+             if (iChannelChange == CHANNEL_CHANGE_AUTOMATIC) {
+                SwitchToCurrentChannel();
+             }
+             state = osContinue;
+             break;
       case kOk:
-         if (iSwitchOK){
-            SwitchToCurrentChannel(true);
-            if (iChannelChange == CHANNEL_CHANGE_OPEN)
-               state = osContinue;
-            else
-               state = osEnd;
-		 }
-         else{
-		    eTimerMatch timerMatch = tmNone;
-			Timers.GetMatch(event, &timerMatch);
-		    if (!(timerMatch==tmFull)){
-				
-	           if (iRemoteTimer && pRemoteTimers) {
-                  RemoteTimers_Event_v1_0 rtEvent;
-                  rtEvent.event = event;
-                  pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
-                  if (!(rtEvent.timer)){
-                     recordDlg = new cYaepgRecDlg();
-	                 recordDlg->UpdateEvent(gridEvents->Event());
-		          }
-		          else{
-		             AddDelRemoteTimer();  // delete remote timer
-		             pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
-                     if (!(rtEvent.timer)) {
-			            messageBox = new cYaepgMsg();
-                        messageBox->UpdateMsg(tr("Remote timer deactivated"));
+             if (iSwitchOK){
+                SwitchToCurrentChannel(true);
+             if (iChannelChange == CHANNEL_CHANGE_OPEN)
+                state = osContinue;
+             else
+                state = osEnd;
+             }
+             else {
+                 eTimerMatch timerMatch = tmNone;
+                 Timers.GetMatch(event, &timerMatch);
+                 if (!(timerMatch==tmFull)){
+
+                    if (iRemoteTimer && pRemoteTimers) {
+                        RemoteTimers_Event_v1_0 rtEvent;
+                        rtEvent.event = event;
+                        pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
+                        if (!(rtEvent.timer)){
+                          recordDlg = new cYaepgRecDlg();
+                          recordDlg->UpdateEvent(gridEvents->Event());
+                        }
+                        else {
+                            AddDelRemoteTimer();  // delete remote timer
+                            pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
+                            if (!(rtEvent.timer)) {
+                                messageBox = new cYaepgMsg();
+                                messageBox->UpdateMsg(tr("Remote timer deactivated"));
+                                msgBoxStart = cTimeMs::Now();
+                                needsRedraw = true;
+                            }
+                        }
+                    }
+                    else {
+                        recordDlg = new cYaepgRecDlg();
+                        recordDlg->UpdateEvent(gridEvents->Event());
+                    }
+                }
+                else {
+                    AddDelTimer();  // delete timer
+                    eTimerMatch timerMatch = tmNone;
+                    Timers.GetMatch(event, &timerMatch);
+                    if (timerMatch==tmNone){
+                        messageBox = new cYaepgMsg();
+                        messageBox->UpdateMsg(tr("Timer deactivated"));
                         msgBoxStart = cTimeMs::Now();
                         needsRedraw = true;
-			         }
-			      }
-  	           }       
-  	           else {
-                  recordDlg = new cYaepgRecDlg();
-	              recordDlg->UpdateEvent(gridEvents->Event());				   
-  	           }
-		    }
- 	        else {
-			   AddDelTimer();  // delete timer
-			   eTimerMatch timerMatch = tmNone;
-			   Timers.GetMatch(event, &timerMatch);
-               if (timerMatch==tmNone){	
-			      messageBox = new cYaepgMsg();
-                  messageBox->UpdateMsg(tr("Timer deactivated"));
-                  msgBoxStart = cTimeMs::Now();
-                  needsRedraw = true;
-			   }
+                    }
+                }
+                needsRedraw = true;
+                state = osContinue;
             }
-            needsRedraw = true;	           
-            state = osContinue;
-         }  
-		 break;
+            break;
       case kRed:
-         if (event && event->EventID()!=0){
-            if (iRecDlgRed) {
-               eTimerMatch timerMatch = tmNone;
-			   Timers.GetMatch(event, &timerMatch);
-               if (!(timerMatch==tmFull)){				
-	              if (iRemoteTimer && pRemoteTimers) {
-                     RemoteTimers_Event_v1_0 rtEvent;
-                     rtEvent.event = event;
-                     pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
-                     if (!(rtEvent.timer)){
+            if (event && event->EventID()!=0){
+                if (iRecDlgRed) {
+                    eTimerMatch timerMatch = tmNone;
+                    Timers.GetMatch(event, &timerMatch);
+                if (!(timerMatch==tmFull)){
+                    if (iRemoteTimer && pRemoteTimers) {
+                        RemoteTimers_Event_v1_0 rtEvent;
+                        rtEvent.event = event;
+                        pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
+                        if (!(rtEvent.timer)){
+                            recordDlg = new cYaepgRecDlg();
+                            recordDlg->UpdateEvent(gridEvents->Event());
+                        }
+                        else{
+                            AddDelRemoteTimer();  // delete remote timer
+                            pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
+                            if (!(rtEvent.timer)) {
+                                messageBox = new cYaepgMsg();
+                                messageBox->UpdateMsg(tr("Remote timer deactivated"));
+                                msgBoxStart = cTimeMs::Now();
+                                needsRedraw = true;
+                            }
+                        }
+                    }
+                    else {
                         recordDlg = new cYaepgRecDlg();
-	                    recordDlg->UpdateEvent(gridEvents->Event());
-		             }
-		             else{
-		                AddDelRemoteTimer();  // delete remote timer
-		                pRemoteTimers->Service("RemoteTimers::GetTimerByEvent-v1.0", &rtEvent);
-                        if (!(rtEvent.timer)) {
-			               messageBox = new cYaepgMsg();
-                           messageBox->UpdateMsg(tr("Remote timer deactivated"));
-                           msgBoxStart = cTimeMs::Now();
-                           needsRedraw = true;
-			            }
-			         }
-  	              }       
-  	              else {
-                     recordDlg = new cYaepgRecDlg();
-	                 recordDlg->UpdateEvent(gridEvents->Event());				   
-  	              }
-		       }
- 	           else {
-			      AddDelTimer();  // delete timer
-			      eTimerMatch timerMatch = tmNone;
-			      Timers.GetMatch(event, &timerMatch);
-                  if (timerMatch==tmNone){	
-			         messageBox = new cYaepgMsg();
-                     messageBox->UpdateMsg(tr("Timer deactivated"));
-                     msgBoxStart = cTimeMs::Now();
-			      }
-               }
-            }  
-            else { 
-               if (iRemoteTimer && pRemoteTimers)
-			      AddDelRemoteTimer(); 
-			   else
-	              AddDelTimer(); 
-		    }
-		    needsRedraw = true;
-		 }   
+                        recordDlg->UpdateEvent(gridEvents->Event());
+                    }
+                }
+                else {
+                    AddDelTimer();  // delete timer
+                    eTimerMatch timerMatch = tmNone;
+                    Timers.GetMatch(event, &timerMatch);
+                    if (timerMatch==tmNone){
+                        messageBox = new cYaepgMsg();
+                        messageBox->UpdateMsg(tr("Timer deactivated"));
+                        msgBoxStart = cTimeMs::Now();
+                    }
+                }
+            }
+            else {
+                if (iRemoteTimer && pRemoteTimers)
+                AddDelRemoteTimer(); 
+                else
+                    AddDelTimer(); 
+            }
+            needsRedraw = true;
+         }
          state = osContinue;
          break;
       case kGreen:
@@ -3355,37 +3373,37 @@ cYaepghd::ProcessKey(eKeys key)
          if (iSwitchTimer && pEPGSearch){
             if (event && (event->EventID() != 0)){
                if (event->IsRunning(true)){
-	              SwitchToCurrentChannel(true);
-                  if (iChannelChange == CHANNEL_CHANGE_OPEN)
-                     state = osContinue;
-                  else
-                     state = osEnd;
-	           } 
-	           else if (iSwitchTimer){ 
-	              AddDelSwitchTimer(); 
-	              needsRedraw = true;
-	              state = osContinue;
-	           }
-		    }
-		 }
-		 else {
-         SwitchToCurrentChannel(true);
-            if (iChannelChange == CHANNEL_CHANGE_OPEN )
-              state = osContinue;
-            else
-               state = osEnd;
-		 }
-  	     break;
+                   SwitchToCurrentChannel(true);
+                   if (iChannelChange == CHANNEL_CHANGE_OPEN)
+                        state = osContinue;
+                   else
+                        state = osEnd;
+                   }
+                   else if (iSwitchTimer){
+                        AddDelSwitchTimer();
+                        needsRedraw = true;
+                        state = osContinue;
+                   }
+              }
+         }
+         else {
+              SwitchToCurrentChannel(true);
+              if (iChannelChange == CHANNEL_CHANGE_OPEN )
+                  state = osContinue;
+              else
+                  state = osEnd;
+         }
+         break;
       case kFastFwd:
          // +24 hours
          UpdateTime(+86400); 
          needsRedraw = true;
          state = osContinue;
-	     break;
+         break;
       case kFastRew:
          // -24 hours
          UpdateTime(-86400);
-	     needsRedraw = true;
+         needsRedraw = true;
          state = osContinue;
          break;
       case k0 ... k9:
@@ -3439,12 +3457,12 @@ cYaepghd::ProcessKey(eKeys key)
          SetTime(now);
       }
    }
-   
+
    if (messageBox != NULL && (cTimeMs::Now() - msgBoxStart) > 1000) {
        delete messageBox;
        messageBox = NULL;
        needsRedraw = true;
-   }    
+   }
 
    /* Redraw the screen if needed */
    if (needsRedraw) {
@@ -3648,8 +3666,8 @@ cYaepghd::Draw(void)
    }
    if (messageBox != NULL) {
        messageBox->Draw(mainBmp);
-   }  
-   
+   }
+
    osd->DrawBitmap(0, 0, *mainBmp);
    cDevice::PrimaryDevice()->ScaleVideo(videoWindowRect); // scale to our desired video window size if supported
    osd->Flush();
@@ -3671,6 +3689,9 @@ private:
 #endif
    int iNewChannelChange;
    int iNewSwitchOK;
+   int iNewMenuBACK;
+   int iNewMenuBackMenuItems;
+   int iNewMenuBackSubMenuItems;
    int iNewRecDlgRed;
    int iNewTimeFormat;
    int iNewChannelOrder;
@@ -3689,13 +3710,16 @@ private:
    const char *CH_ORDER_FORMATS[CHANNEL_ORDER_COUNT];
    const char *CH_CHANGE_MODES[CHANNEL_CHANGE_COUNT];
    const char *resizeImagesTexts[3];
-   
+
+private:
+    void Create(void);
 protected:
    virtual void Store(void);
 
 public:
    cMenuSetupYaepg(void);
    ~cMenuSetupYaepg();
+   virtual eOSState ProcessKey(eKeys);
 };
 
 
@@ -3708,7 +3732,10 @@ void cMenuSetupYaepg::Store(void)
  #endif
  #endif
    iChannelChange      = iNewChannelChange;
-   iSwitchOK           = iNewSwitchOK;  
+   iSwitchOK           = iNewSwitchOK;
+   iMenuBACK           = iNewMenuBACK;
+   iMenuBackMenuItems  = iNewMenuBackMenuItems;
+   iMenuBackSubMenuItems  = iNewMenuBackSubMenuItems;
    iRecDlgRed          = iNewRecDlgRed;
    iTimeFormat         = iNewTimeFormat;
    iChannelOrder       = iNewChannelOrder;
@@ -3721,7 +3748,7 @@ void cMenuSetupYaepg::Store(void)
    iImageExtension  = iNewImageExtension;
    iSwitchMinsBefore = iNewSwitchMinsBefore;
    sThemeName          = themes[iNewThemeIndex];
-   
+
    if (strcmp(sMainMenuEntry, tr("YaepgHD")) == 0) {
       strcpy(sMainMenuEntry,"");
    }
@@ -3738,7 +3765,10 @@ void cMenuSetupYaepg::Store(void)
  #endif
    SetupStore("ChannelChange",      iChannelChange);
    SetupStore("SwitchOk",           iSwitchOK);
-   SetupStore("RecDlgRed",           iRecDlgRed);
+   SetupStore("MenuBACK",           iMenuBACK);
+   SetupStore("MenuBackMenuItems",     iMenuBackMenuItems);
+   SetupStore("MenuBackSubMenuItems",  iMenuBackSubMenuItems);
+   SetupStore("RecDlgRed",          iRecDlgRed);
    SetupStore("TimeFormat",         iTimeFormat);
    SetupStore("ChannelOrder",       iChannelOrder);
    SetupStore("ChannelNumber",      iChannelNumber);
@@ -3763,7 +3793,7 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    CH_CHANGE_MODES[CHANNEL_CHANGE_CLOSE]        = tr("Close YaepgHD");
    CH_CHANGE_MODES[CHANNEL_CHANGE_OPEN] = tr("Leave YaepgHD open");
    CH_CHANGE_MODES[CHANNEL_CHANGE_AUTOMATIC]     = tr("Automatic");
-   
+
    resizeImagesTexts[0] = tr("pixel algo");
    resizeImagesTexts[1] = tr("ratio algo");
    resizeImagesTexts[2] = tr("zoom image");
@@ -3779,11 +3809,11 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    } else {
       iNewThemeIndex = 0;
    }
-   
+
    strcpy(sNewMainMenuEntry,sMainMenuEntry);
   if (isempty(sNewMainMenuEntry)){
      strcpy(sNewMainMenuEntry,tr("YaepgHD"));
-  }   
+  }
 
 
    iNewHideMenuEntry = iHideMenuEntry;
@@ -3793,7 +3823,10 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    #endif
    #endif
    iNewChannelChange   = iChannelChange;
-   iNewSwitchOK        = iSwitchOK; 
+   iNewSwitchOK        = iSwitchOK;
+   iNewMenuBACK        = iMenuBACK;
+   iNewMenuBackMenuItems  = iMenuBackMenuItems;
+   iNewMenuBackSubMenuItems  = iMenuBackSubMenuItems;
    iNewRecDlgRed       = iRecDlgRed;
    iNewTimeFormat      = iTimeFormat;
    iNewChannelOrder    = iChannelOrder;
@@ -3806,6 +3839,13 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    iNewImageExtension  = iImageExtension;
    iNewSwitchMinsBefore= iSwitchMinsBefore;
 
+    Create();
+}
+
+void cMenuSetupYaepg::Create() {
+   int current = Current(); // remember current menu item index
+   Clear(); // clear old menu
+
    Add(new cMenuEditBoolItem (tr("Hide mainmenu entry"), &iNewHideMenuEntry));
    Add(new cMenuEditStrItem(tr("Main menu entry"), sNewMainMenuEntry, sizeof(sNewMainMenuEntry),trVDR(FileNameChars)));
    #if defined(MAINMENUHOOKSVERSION) 
@@ -3815,6 +3855,13 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    #endif
    Add(new cMenuEditStraItem (tr("Channel change"), &iNewChannelChange, CHANNEL_CHANGE_COUNT, CH_CHANGE_MODES));
    Add(new cMenuEditBoolItem (tr("Switch channel with OK"), &iNewSwitchOK));
+   Add(new cMenuEditBoolItem (tr("Mainmenu with BACK"), &iNewMenuBACK));
+   if (iNewMenuBACK) {
+        Add(new cMenuEditIntItem( tr("   Select menu at position..."), &iNewMenuBackMenuItems, 0, 100));
+        if (iNewMenuBackMenuItems) {
+            Add(new cMenuEditIntItem( tr("      Select submenu at position..."), &iNewMenuBackSubMenuItems, 0, 50));
+        }
+   }
    Add(new cMenuEditBoolItem (tr("Record dialog with red button"), &iNewRecDlgRed));
    Add(new cMenuEditStraItem (tr("Time format"), &iNewTimeFormat, TIME_FORMAT_COUNT, TIME_FORMATS));
    Add(new cMenuEditStraItem (tr("Channel order"), &iNewChannelOrder, CHANNEL_ORDER_COUNT, CH_ORDER_FORMATS));
@@ -3826,7 +3873,7 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    Add(new cMenuEditBoolItem (tr("EPG images"), &iNewEpgImages));
    Add(new cMenuEditStraItem(tr("  Resize images"), &iNewResizeImages, 3, resizeImagesTexts));
    Add(new cMenuEditStraItem(tr("  Image format"), &iNewImageExtension, 3, imageExtensionTexts));
-   
+
    if (pEPGSearch) {
       Add(new cMenuEditBoolItem (tr("Switch timer"), &iNewSwitchTimer)); 
       Add(new cMenuEditIntItem( tr("  Switch ... minutes before start"), &iNewSwitchMinsBefore));
@@ -3840,12 +3887,13 @@ cMenuSetupYaepg::cMenuSetupYaepg(void)
    else {
       YAEPG_INFO("RemoteTimers not found (Remote Timer disabled)!");
    }
-   
-   
-   
+
    if (numThemes > 0) {
       Add(new cMenuEditStraItem (trVDR("Setup.OSD$Theme"), &iNewThemeIndex, numThemes, themes));
    }
+
+   SetCurrent(Get(current)); // restore previously selected menu entry
+   Display(); //show newly built menu
 }
 
 cMenuSetupYaepg::~cMenuSetupYaepg()
@@ -3858,12 +3906,25 @@ cMenuSetupYaepg::~cMenuSetupYaepg()
    }
 }
 
+eOSState cMenuSetupYaepg::ProcessKey(eKeys key)
+{
+    int iOldMenuBACK = iNewMenuBACK;
+    int iOldNewMenuBackMenuItems = iNewMenuBackMenuItems;
+    eOSState state = cMenuSetupPage::ProcessKey(key);
+    if ( iOldMenuBACK != iNewMenuBACK ||
+         (  iOldNewMenuBackMenuItems * iNewMenuBackMenuItems == 0 &&
+            iOldNewMenuBackMenuItems + iNewMenuBackMenuItems != 0 ) ) {
+        Create(); // re-create setup menu only if necessary, if the 2 values changed from 0 to non-zero and vice-versa
+    }
+    return state;
+}
+
 /*
  *****************************************************************************
  * cPluginYaepghd
  *****************************************************************************
  */
-static const char *VERSION        = "0.0.4_pre20130318";
+static const char *VERSION        = "0.0.4_pre20130324";
 static const char *DESCRIPTION    = trNOOP("Yet another EPG in HD");
 
 class cPluginYaepghd : public cPlugin {
@@ -3961,12 +4022,12 @@ cPluginYaepghd::Start(void)
    Icons::InitCharSet();
    pEPGSearch = cPluginManager::GetPlugin("epgsearch");
    if (!pEPGSearch) {
-   	   YAEPG_ERROR("EPGSearch does not exist (switch timer disabled)!");
+      YAEPG_ERROR("EPGSearch does not exist (switch timer disabled)!");
    }
 
    pRemoteTimers = cPluginManager::CallFirstService("RemoteTimers::RefreshTimers-v1.0", NULL);
    if (!pRemoteTimers) {
-   	   YAEPG_ERROR("RemoteTimers does not exist!");
+      YAEPG_ERROR("RemoteTimers does not exist!");
    }
    return true;
 }
@@ -4023,7 +4084,7 @@ cPluginYaepghd::SetupMenu(void)
 bool
 cPluginYaepghd::SetupParse(const char *Name, const char *Value)
 {
-   char themeName[MaxThemeName];
+   char themeName[4 * MaxThemeName];
 
    // Parse your own setup parameters and store their values.
    if      (!strcasecmp(Name, "HideMenuEntry")) { iHideMenuEntry = atoi(Value); }
@@ -4035,6 +4096,9 @@ cPluginYaepghd::SetupParse(const char *Name, const char *Value)
    #endif
    else if (!strcasecmp(Name, "ChannelChange")) { iChannelChange = atoi(Value); }
    else if (!strcasecmp(Name, "SwitchOk")) { iSwitchOK = atoi(Value); }
+   else if (!strcasecmp(Name, "MenuBACK")) { iMenuBACK = atoi(Value); }
+   else if (!strcasecmp(Name, "MenuBackMenuItems")) { iMenuBackMenuItems = atoi(Value); }
+   else if (!strcasecmp(Name, "MenuBackSubMenuItems")) { iMenuBackSubMenuItems = atoi(Value); }
    else if (!strcasecmp(Name, "RecDlgRed")) { iRecDlgRed = atoi(Value); }
    else if (!strcasecmp(Name, "TimeFormat"))    { iTimeFormat = atoi(Value); }
    else if (!strcasecmp(Name, "ChannelOrder"))  { iChannelOrder = atoi(Value); }

@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Yaepghd 0.0.1\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-03-18 22:04+0100\n"
-"PO-Revision-Date: 2013-03-18 21:48+0100\n"
+"POT-Creation-Date: 2013-03-24 14:15+0100\n"
+"PO-Revision-Date: 2013-03-24 14:00+0100\n"
 "Last-Translator: Lucian Muresan <lucianm@users.sorceforge.net>\n"
 "Language-Team:  <vdr@linuxtv.org>\n"
 "Language: \n"
@@ -96,6 +96,15 @@ msgstr "Kanal wechseln"
 
 msgid "Switch channel with OK"
 msgstr "Kanal umschalten mit OK"
+
+msgid "Mainmenu with BACK"
+msgstr "Zum Hauptmenü mit BACK"
+
+msgid "   Select menu at position..."
+msgstr "   Folgende Menüposition selektieren"
+
+msgid "      Select submenu at position..."
+msgstr "      Folgende Untermenüposition selektieren"
 
 msgid "Record dialog with red button"
 msgstr "Aufnahmedialog bei roter Taste"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Yaepghd 0.0.1\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2013-03-18 00:04+0100\n"
+"POT-Creation-Date: 2013-03-24 13:54+0100\n"
 "PO-Revision-Date: 2009-01-28 10:51+0200\n"
 "Last-Translator: Rolf Ahrenberg <rahrenbe@cc.hut.fi>\n"
 "Language-Team: <vdr@linuxtv.org>\n"
@@ -96,6 +96,15 @@ msgid "Channel change"
 msgstr "Kanavanvaihto"
 
 msgid "Switch channel with OK"
+msgstr ""
+
+msgid "Mainmenu with BACK"
+msgstr ""
+
+msgid "   Select menu at position..."
+msgstr ""
+
+msgid "      Select submenu at position..."
 msgstr ""
 
 msgid "Record dialog with red button"
