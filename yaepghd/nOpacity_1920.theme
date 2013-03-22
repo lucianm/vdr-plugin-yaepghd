@@ -1,0 +1,75 @@
+bgImage=nOpacity_1920_darkblue/bg.png
+recDlgImage=nOpacity_1920_darkblue/rec.png
+msgBgImage=nOpacity_1920_darkblue/msg.png
+
+gridEventFont="VDRSymbols Sans:Book;30"
+gridChanFont="VDRSymbols Sans:Book;27"
+gridTimeFont="VDRSymbols Sans:Book;22"
+gridDateFont="VDRSymbols Sans:Book;30"
+eventTitleFont="VDRSymbols Sans:Book;42"
+eventTimeFont="VDRSymbols Sans:Book;30"
+eventDescFont="VDRSymbols Sans:Book;27"
+eventDateFont="VDRSymbols Sans:Book;30"
+eventInfoFont="VDRSymbols Sans:Book;32"
+recDlgFont="VDRSymbols Sans:Book;50"
+msgBoxFont="VDRSymbols Sans:Book;32"
+helpFont="VDRSymbols Sans:Book;34"
+
+gridEventColor=FF8C8C8C
+gridSelBg=FF5078AB
+gridSelFg=FFFFFFFF
+gridSepColor=FF8C8C8C
+gridChanColor=FFFFFFFF
+gridTimeColor=FFFFFFFF
+gridDateColor=FF8C8C8C
+eventInfoColor=FFFF0000
+eventTitleColor=FFFFFFFF
+eventTimeColor=FF8C8C8C
+eventDescColor=FFFFFFFF
+eventDateColor=FF8C8C8C
+tlineBoxColor=FF8C8C8C
+recDlgColor=FFFFFFFF
+msgBoxColor=FFFFFFFF
+helpColor=FFFFFFFF
+
+gridEventGeom=410,562,1415,426
+gridChanGeom=45,560,300,428
+gridTimeGeom=375,497,1450,12
+gridDateGeom=45,470,300,65
+gridHorizSpace=15
+gridNumChans=8
+
+eventTitleGeom=35,30,975,65
+eventTimeGeom=35,100,300,65 
+eventDescGeom=35,180,1000,300
+eventDateGeom=860,100,170,65 
+eventInfoGeom=440,100,215,65
+tlineLocGeom=375,527,1450,50
+tlineBoxGeom=0,0,30,12
+
+vidWinGeom=1080,40,790,444
+helpGeom=0,1028,1920,40
+leftArrowWidth=20
+rightArrowWidth=40
+textBorder=4
+textSpace=5
+eventInfoAlign=2
+#    1 = Timer | VPS | Running  (default)
+#    2 = Running | VPS | Timer
+
+# Record Dialog
+
+recDlgGeom=26,162,1010,312
+recTitleGeom=0,1,0,1
+recTimeGeom=0,1,0,1
+recStartGeom=20,90,300,60
+recEndGeom=20,151,300,60
+recFreqGeom=20,250,300,60
+recStInpGeom=400,90,160,60
+recEnInpGeom=400,151,160,60
+recFrInpGeom=400,250,160,60
+
+# Message Box
+
+msgBoxGeom=460,570,1000,80
+
