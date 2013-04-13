@@ -1,7 +1,7 @@
 VDR Plugin 'yaepghd' Revision History
 -------------------------------------
 
-2013-03-XX: Version 0.0.4
+2013-04-14: Version 0.0.4
 
 - at least for now, this version is no longer hosted at vdr-developer.org
   as the old project (after ver. 0.0.1) still seems to be abandoned, check
@@ -48,6 +48,7 @@ VDR Plugin 'yaepghd' Revision History
 - The main menu entry can now be set by setup.
   (Note: when changing the name to something different than the default, it is
   no more dependent on the OSD language) (gnapheus, copied from epgsearch)
+
 2009-xx-xx: Version 0.0.1
 
 - Initial revision.

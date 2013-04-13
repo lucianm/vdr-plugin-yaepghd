@@ -3926,7 +3926,7 @@ eOSState cMenuSetupYaepg::ProcessKey(eKeys key)
  * cPluginYaepghd
  *****************************************************************************
  */
-static const char *VERSION        = "0.0.4_pre20130402";
+static const char *VERSION        = "0.0.4";
 static const char *DESCRIPTION    = trNOOP("Yet another EPG in HD");
 
 class cPluginYaepghd : public cPlugin {
