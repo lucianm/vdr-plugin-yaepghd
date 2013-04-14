@@ -2565,7 +2565,7 @@ cYaepgRecDlg::UpdateEvent(const cEvent *_event)
 
    /* Fill in initial values for start/end input */
    startInput.UpdateTime(event->StartTime() - (Setup.MarginStart * 60));
-   endInput.UpdateTime(event->StartTime() + _event->Duration() + (Setup.MarginStart * 60));
+   endInput.UpdateTime(event->StartTime() + _event->Duration() + (Setup.MarginStop * 60));
 
 }
 
@@ -3926,7 +3926,7 @@ eOSState cMenuSetupYaepg::ProcessKey(eKeys key)
  * cPluginYaepghd
  *****************************************************************************
  */
-static const char *VERSION        = "0.0.4";
+static const char *VERSION        = "0.0.5_pre1";
 static const char *DESCRIPTION    = trNOOP("Yet another EPG in HD");
 
 class cPluginYaepghd : public cPlugin {

@@ -1,13 +1,17 @@
 VDR Plugin 'yaepghd' Revision History
 -------------------------------------
 
+2013-XX-YY: Version 0.0.5
+
+- corrected event input end margin (thanks to "Saman" from vdr-portal.de
+
 2013-04-14: Version 0.0.4
 
 - at least for now, this version is no longer hosted at vdr-developer.org
   as the old project (after ver. 0.0.1) still seems to be abandoned, check
   the README file for the links
 - switched to ScaleVideo API introduced with vdr-1.7.33 and dropped old patch
-- switched MAkefile to new style introduced with vdr-1.7.34
+- switched Makefile to new style introduced with vdr-1.7.34
 - integrated extra plugin themes found in the community edition thread
   at vdr-portal.de
 - updated anthra_1280 theme with the one from "pc_medusa" at vdr-portal.de
