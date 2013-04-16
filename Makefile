@@ -63,7 +63,7 @@ endif
 
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o
+OBJS = $(PLUGIN).o MenuSetupYaepg.o OsdObjYaepg.o GuiElements.o Utils.o
 
 ### The main target:
 
