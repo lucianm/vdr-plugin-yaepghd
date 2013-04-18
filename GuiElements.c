@@ -1141,7 +1141,7 @@ cYaepgGridDate::cYaepgGridDate(time_t _t)
 void
 cYaepgGridDate::UpdateTime(time_t _t)
 {
-   sprintf(dateStr,"%s", *DateString(_t));
+   snprintf(dateStr, sizeof(dateStr), "%s", *DateString(_t));
    Generate();
 }
 
