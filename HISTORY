@@ -4,6 +4,8 @@ VDR Plugin 'yaepghd' Revision History
 2013-XX-YY: Version 0.0.5
 
 - corrected event input end margin (thanks to "Saman" from vdr-portal.de
+- re-partitioned the code in several source files for somewhat better overview
+- fixed a crash reported by Dimitar Petrovski "dimeptr" in Issue #1 
 
 2013-04-14: Version 0.0.4
 
